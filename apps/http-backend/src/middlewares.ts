@@ -1,7 +1,8 @@
+import { prisma } from "@repo/Database/prismaClient";
 import { Request, Response, NextFunction } from "express";
 import jwt, { decode } from "jsonwebtoken";
 const JWT_SECRET = "my_jwt_secret";
-export const auth = (req: Request, res: Response, next: NextFunction) => {
+export const auth = async (req: Request, res: Response, next: NextFunction) => {
   const token = req.headers.authtoken ?? "";
   console.log("token: ", token);
   if (!token) {
@@ -11,22 +12,30 @@ export const auth = (req: Request, res: Response, next: NextFunction) => {
     return;
   }
   try {
-    if(typeof(token) == "string"){
-        const decodedToken = jwt.verify(token, JWT_SECRET);
-        console.log("token contents: ", decodedToken);
-
+    if (typeof token == "string") {
+      const decodedToken = jwt.verify(token, JWT_SECRET);
+      if (typeof decodedToken === "string") {
+        throw new Error("Invalid Token");
+      } else {
+        if ("username" in decodedToken) {
+          const username: string = decodedToken.username;
+          const user = await prisma.user.findFirst({ where: { username } });
+          if (!user) {
+            throw new Error("User not Signed up!");
+          }
+         
+          const id = user.id; 
+          req.id = id;
+          next();
+        } else {
+          throw new Error("Attribute not found in Token!");
+        }
+      }
+    } else {
+      res.status(403).json({
+        message: "Invalid token!",
+      });
     }
-    else{
-        res.status(403).json({
-            message:"Invalid token!"
-        })
-    }
-    //find the client with the username we got from the token in the DB .
-
-    //if client present:
-    const id = "123123"; // store the id of the user in the request field for convenience.
-    req.id = id;
-    next();
   } catch (err) {
     console.log("Error: ", err);
     res.status(403).json({
