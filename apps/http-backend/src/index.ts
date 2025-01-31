@@ -11,7 +11,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 
-app.post("/signup", async (req, res) => {
+app.post("/api/v1/signup", async (req, res) => {
   
   
   const parsedData = SignUpSchema.safeParse(req.body);
@@ -50,7 +50,7 @@ app.post("/signup", async (req, res) => {
   }
 });
 
-app.post("/signin", async (req, res) => {
+app.post("/api/v1/signin", async (req, res) => {
 
   const { username, password } = req.body;
 
@@ -79,7 +79,7 @@ app.post("/signin", async (req, res) => {
   }
 });
 
-app.post("/create-room", auth, async (req, res) => {
+app.post("/api/v1/create-room", auth, async (req, res) => {
   try {
     const adminId = req.id;
     // const { slug } = req.body; 
@@ -101,7 +101,7 @@ app.post("/create-room", auth, async (req, res) => {
       },
     });
 
-    
+
 
     res.status(200).json({
       message: "created room!",
@@ -118,6 +118,22 @@ app.post("/create-room", auth, async (req, res) => {
 app.get("/", (req, res) => {
   res.send("Welcome to Excalidraw");
 });
+
+
+app.get("/api/v1/chathistory/:roomId", async(req,res) => {
+  const roomId = Number(req.params.roomId); 
+  try
+  {const chatHistory = await prisma.chat.findMany({where:{roomId:roomId}});
+  res.status(200).json({
+    chats:chatHistory
+  })}
+  catch(err:any){ 
+    console.log("Error fetching chat history: " + err);
+    res.status(500).json({
+      message: "Internal Server Error",
+    });
+  }
+}); 
 
 app.listen(3002, () => {
   console.log("Listening at port 3002");
