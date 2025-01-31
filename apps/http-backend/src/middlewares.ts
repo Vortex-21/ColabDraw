@@ -17,7 +17,7 @@ export const auth = async (req: Request, res: Response, next: NextFunction) => {
       if (typeof decodedToken === "string") {
         throw new Error("Invalid Token");
       } else {
-        if ("username" in decodedToken) {
+        if ("userId" in decodedToken) {
           const username: string = decodedToken.username;
           const user = await prisma.user.findFirst({ where: { username } });
           if (!user) {

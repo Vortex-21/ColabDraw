@@ -66,7 +66,7 @@ app.post("/signin", async (req, res) => {
       return;
     }
     
-    const token = jwt.sign({ username: username }, JWT_SECRET);
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET);
     res.status(200).json({
       token: token,
       message: "Signed in successfully!",
@@ -94,14 +94,18 @@ app.post("/create-room", auth, async (req, res) => {
       throw new Error("No admin found!");
     }
     
-    await prisma.room.create({
+    const newRoom = await prisma.room.create({
       data: {
         adminId,
         slug:parsedData.data.slug, 
       },
     });
+
+    
+
     res.status(200).json({
       message: "created room!",
+      roomId:newRoom.id
     });
   } catch (err: any) {
     console.log("Error Creating Room: " + err);
