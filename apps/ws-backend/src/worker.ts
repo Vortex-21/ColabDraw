@@ -1,5 +1,5 @@
 import { Job, Worker } from "bullmq";
-import { prisma } from "@repo/Database/prismaClient";
+import prisma  from "@repo/Database/prismaClient";
 import { Redis } from "ioredis";
 const connection = new Redis({ maxRetriesPerRequest: null });
 const chatInsertionWorker = new Worker(

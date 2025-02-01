@@ -1,4 +1,4 @@
-import { prisma } from "@repo/Database/prismaClient";
+import prisma  from "@repo/Database/prismaClient";
 import { Request, Response, NextFunction } from "express";
 import jwt, { decode } from "jsonwebtoken";
 const JWT_SECRET = "my_jwt_secret";

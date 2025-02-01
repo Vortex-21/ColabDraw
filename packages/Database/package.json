@@ -6,17 +6,18 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "exports":{
-    "./prismaClient":"./src/index.ts"
+  "exports": {
+    "./prismaClient": "./src/index.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@repo/typescript-config":"workspace:*"
+    "@repo/typescript-config": "workspace:*"
   },
   "dependencies": {
     "@prisma/client": "6.2.1",
+    "@types/node": "^22.13.0",
     "prisma": "^6.2.1"
   }
 }

@@ -2,7 +2,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import jwt, { JsonWebTokenError } from 'jsonwebtoken';
 import { JWT_SECRET } from "@repo/backend-common/config";
 import { Queue } from "bullmq";
-import { prisma } from "@repo/Database/prismaClient";
+import prisma  from "@repo/Database/prismaClient";
 
 const wss = new WebSocketServer({port:3001}); 
 function checkUser(token: string): string|null { 

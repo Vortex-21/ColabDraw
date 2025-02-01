@@ -14,8 +14,8 @@ datasource db {
 }
 
 model User {
-  id       String @id @default(uuid())
-  username String @unique
+  id       String  @id @default(uuid())
+  username String  @unique
   password String
   name     String
   photo    String?
@@ -33,10 +33,11 @@ model Room {
 }
 
 model Chat {
-  id      Int    @id @default(autoincrement())
-  roomId  Int
-  userId  String
-  message String
-  room    Room   @relation(fields: [roomId], references: [id])
-  user    User   @relation(fields: [userId], references: [id])
+  id        Int      @id @default(autoincrement())
+  roomId    Int
+  userId    String
+  message   String
+  room      Room     @relation(fields: [roomId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
 }
