@@ -104,10 +104,6 @@ app.post("/api/v1/create-room", auth, async (req, res) => {
   }
 });
 
-app.get("/", (req, res) => {
-  res.send("Welcome to Excalidraw");
-});
-
 app.get("/api/v1/chathistory/:roomId", async (req, res) => {
   const roomId = Number(req.params.roomId);
   const cursorId = req.body.cursorId; 
@@ -139,6 +135,11 @@ app.get("/api/v1/chathistory/:roomId", async (req, res) => {
     });
   }
 });
+
+app.get("/", (req, res) => {
+  res.send("Welcome to Excalidraw");
+});
+
 
 app.listen(3002, () => {
   console.log("Listening at port 3002");
