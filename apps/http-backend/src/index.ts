@@ -3,12 +3,23 @@ import jwt from "jsonwebtoken";
 import { auth } from "./middlewares";
 import { CreateRoomSchema, SignUpSchema } from "@repo/common/types";
 import { JWT_SECRET } from "@repo/backend-common/config";
-import prisma  from "@repo/Database/prismaClient";
+import prisma from "@repo/Database/prismaClient";
+import cors from "cors";
+import cookieParser from "cookie-parser";
+import { v2 } from "cloudinary";
+import {config} from 'dotenv'
+config(); 
 const app = express();
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-
+app.use(cookieParser());
+app.use(
+  cors({
+    origin: ["http://localhost:3000"],
+    credentials: true,
+  })
+);
 app.post("/api/v1/signup", async (req, res) => {
   const parsedData = SignUpSchema.safeParse(req.body);
 
@@ -18,8 +29,8 @@ app.post("/api/v1/signup", async (req, res) => {
         data: {
           username: parsedData.data.username,
           password: parsedData.data.password,
-          name: parsedData.data.name,
-          photo: parsedData.data.photo,
+          email: parsedData.data.email,
+          
         },
       });
       res.status(200).json({
@@ -58,6 +69,7 @@ app.post("/api/v1/signin", async (req, res) => {
     }
 
     const token = jwt.sign({ userId: user.id }, JWT_SECRET);
+    res.cookie("token", token, { maxAge: 30 * 24 * 60 * 60 * 1000 });
     res.status(200).json({
       token: token,
       message: "Signed in successfully!",
@@ -106,29 +118,26 @@ app.post("/api/v1/create-room", auth, async (req, res) => {
 
 app.get("/api/v1/chathistory/:roomId", async (req, res) => {
   const roomId = Number(req.params.roomId);
-  const cursorId = req.body.cursorId; 
-  
+  const cursorId = req.body.cursorId;
+
   const queryOptions: any = {
-    take:-50,
+    take: -50,
     where: { roomId: roomId },
-    orderBy:{
-      createdAt:'desc'
-    }, 
+    orderBy: {
+      createdAt: "desc",
+    },
+  };
+
+  if (cursorId) {
+    queryOptions.cursor = { id: cursorId };
   }
 
-  if(cursorId){ 
-    queryOptions.cursor = {id: cursorId}
-  }
-
-  try 
-  {
+  try {
     const chatHistory = await prisma.chat.findMany(queryOptions);
     res.status(200).json({
       chats: chatHistory,
     });
-  } 
-  catch (err: any) 
-  {
+  } catch (err: any) {
     console.log("Error fetching chat history: " + err);
     res.status(500).json({
       message: "Internal Server Error",
@@ -136,10 +145,39 @@ app.get("/api/v1/chathistory/:roomId", async (req, res) => {
   }
 });
 
+app.get("/api/v1/sign-cloudinary", async (req, res) => {
+  // const { params } = req.body;
+  try {
+    if (!process.env.CLOUDINARY_API_SECRET) {
+      throw Error("Incomplete Environment Variables!");
+    }
+    // const signature = await v2.utils.api_sign_request(params, process.env.CLOUDINARY_API_SECRET);
+    const timestamp = Math.round(new Date().getTime() / 1000);
+
+    const signature = v2.utils.api_sign_request(
+      {
+        timestamp: timestamp,
+        folder:'colabdraw'
+      },
+      process.env.CLOUDINARY_API_SECRET
+    );
+
+    // return { timestamp, signature };
+    res.status(200).json({
+      timestamp,
+      signature,
+    });
+  } catch (err: any) {
+    console.log("Error cloudinary signing: " + err);
+    res.status(500).json({
+      message: "Internal Server Error.",
+    });
+  }
+});
+
 app.get("/", (req, res) => {
   res.send("Welcome to Excalidraw");
 });
-
 
 app.listen(3002, () => {
   console.log("Listening at port 3002");

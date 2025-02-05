@@ -13,16 +13,12 @@ export const SignUpSchema = z.object({
           "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character",
       }
     ),
-  name: z.string().min(3, {
-    message: "Name should contain atleast 3 characters.",
-  }),
-  photo: z.string().url({
-    message: "Invalid URL format.",
-  }).or(z.string().length(0)),
+  email: z.string().email(),
+    
 });
 
 export const CreateRoomSchema = z.object({
   slug: z.string().min(3, {
     message: "Slug should contain atleast 3 characters.",
   }),
-})
+});
