@@ -18,7 +18,7 @@ import Link from "next/link";
 export default function App() {
   // const router = useRouter(); 
   return (
-    <div className="min-h-screen bg-gray-900">
+    <div className="min-h-screen bg-gray-900 min-w-screen">
       {/* Navigation */}
       <nav className="fixed w-full bg-gray-900/80 backdrop-blur-sm z-50 border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -114,16 +114,16 @@ export default function App() {
 
       {/* CTA Section */}
       <div className="py-24 bg-violet-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center flex flex-col justify-center items-center">
           <h2 className="text-3xl font-bold text-white">
             Ready to bring your ideas to life?
           </h2>
           <p className="mt-4 text-xl text-violet-200">
             Join thousands of teams already using ColabDraw to collaborate better.
           </p>
-          <button className="mt-8 px-8 py-4 bg-white text-violet-900 rounded-lg hover:bg-violet-100 transition-colors text-lg font-medium">
+          <Link href="/auth/signup" className="w-[30%] cursor-pointer mt-16 px-8 py-4 bg-white text-violet-900 rounded-lg hover:bg-violet-100 transition-colors text-lg font-medium">
             Get Started for Free
-          </button>
+          </Link>
         </div>
       </div>
 
