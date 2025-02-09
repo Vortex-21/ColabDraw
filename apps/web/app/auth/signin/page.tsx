@@ -21,7 +21,7 @@ export default function SignIn() {
       );
       console.log("response : " + response);
       if (response.status === 200) {
-        router.push("/canvas/");
+        router.push("/lobby/");
       } else {
         //   alert("Invalid credentials");
         notify("Invalid credentials", false);

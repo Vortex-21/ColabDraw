@@ -1,30 +1,29 @@
-import axios from "axios";
+import axios from "axios"; 
 import rough from "roughjs";
 import { RoughCanvas } from "roughjs/bin/canvas";
 import { Drawable } from "roughjs/bin/core";
-
 
 enum Shapes {
   rect = "rectangle",
   circle = "circle",
 }
-// let history: Array<Shapes> = [];
+
 let history: Array<Drawable> = [];
 let finalShape: Drawable;
 
 export async function initDraw(roomId:string, canvas: HTMLCanvasElement, selectedShape: Shapes) {
 
-  // const prevData = await axios.get(`http://localhost:3002/api/v1/geometryHistory/${roomId}`, {withCredentials:true}); 
-  // console.log(prevData); 
+  const prevData = await axios.get(`http://localhost:3002/api/v1/geometryHistory/${roomId}`, {withCredentials:true}); 
+  console.log(prevData); 
   console.log("shape: ", selectedShape); 
   const rc = rough.canvas(canvas);
   let ctx = canvas.getContext("2d");
   if (!ctx) {
     return;
   }
-  let startX = 0,
-    startY = 0;
+  let startX = 0, startY = 0;
   let clicked: boolean = false;
+  let width=0 , height=0;
   history.forEach((el:Drawable) => rc.draw(el)); 
   canvas.onmousedown = (e: MouseEvent) => {
     clicked = true;
@@ -35,8 +34,8 @@ export async function initDraw(roomId:string, canvas: HTMLCanvasElement, selecte
 
   canvas.onmousemove = (e: MouseEvent) => {
     if (clicked) {
-      const width = e.offsetX - startX;
-      const height = e.offsetY - startY;
+      width = e.offsetX - startX;
+      height = e.offsetY - startY;
       clearCanvas(ctx, canvas, rc);
       if (selectedShape == Shapes.rect) {
         const rect = rc.rectangle(startX, startY, width, height, {
@@ -65,17 +64,32 @@ export async function initDraw(roomId:string, canvas: HTMLCanvasElement, selecte
   };
 
   canvas.onmouseup = (e: MouseEvent) => {
-    // const endWidth = e.offsetX - startX;
-    // const endHeight = e.offsetY - startY;
+    
     clicked = false;
     history.push(finalShape);
-    // history.push({
-    //   type: "rectangle",
-    //   x: startX,
-    //   y: startY,
-    //   width: endWidth,
-    //   height: endHeight,
-    // });
+    const ws = new WebSocket('ws://localhost:3001'); 
+    ws.onopen = () => {
+      console.log('Connected to websocket server'); 
+      console.log('Sending history'); 
+      ws.send(JSON.stringify({ 
+        type:'chat', 
+        payload:{ 
+          message:'Drawing', 
+          roomId, 
+          shape: finalShape.shape, 
+          startX, 
+          startY, 
+          width, 
+          height,
+        }
+      })) 
+    }
+    ws.onerror = (err:Event) => { 
+      console.log('Error sending drawing data: ' + err); 
+    }
+    ws.onclose = () => { 
+      console.log('WebSocket connection closed'); 
+    }
   };
 }
 
