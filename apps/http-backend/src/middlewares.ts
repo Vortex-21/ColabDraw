@@ -5,9 +5,9 @@ const JWT_SECRET = "my_jwt_secret";
 
 export const auth = async (req: Request, res: Response, next: NextFunction) => {
   // const token = req.headers.authtoken ?? "";
-  // console.log(req.cookies); 
+  console.log(req.cookies); 
   const token = req.cookies.token || ""; 
-  // console.log("token: ", token);
+  console.log("token: ", token);
   if (!token) {
     res.status(403).json({
       message: "Token invalid!",

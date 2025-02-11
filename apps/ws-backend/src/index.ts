@@ -26,11 +26,15 @@ function checkUser(token: string): string|null {
 let roomToSocket = new Map<number,Map<WebSocket,boolean>>(); 
 let dbInsertionQueue = new Queue('dbInsertionQueue'); 
 
-async function addMessageToDB(roomId:number, userId:string, message: string){ 
+async function addMessageToDB(roomId:number, userId:string, startX:number, startY:number, width:number, height:number, shape:string){ 
     try { 
         await dbInsertionQueue.add('dbInsertionQueue',{ 
                 roomId,
-                message, 
+                startX,
+                startY,
+                width,
+                height,
+                shape,
                 userId
             
         }, { 
@@ -45,8 +49,12 @@ async function addMessageToDB(roomId:number, userId:string, message: string){
 
 wss.on('connection', (socket, request)   => {
     console.log("User connected!"); 
+    console.log(JSON.stringify(roomToSocket));
     const data = (request.url)?.split('?')[1]; 
+    console.log('URL: ', request.url);
+    console.log("Data: " + data); 
     if(!data){ 
+        console.log('closing because user jwt not provided in url');
         socket.close(); 
         return;    
     }
@@ -55,7 +63,9 @@ wss.on('connection', (socket, request)   => {
     const token = urlData.get("token")??""; 
                
     const userId = checkUser(token); 
+    console.log(userId); 
     if(!userId){ 
+        console.log('closing connection')
         socket.close(); 
         return; 
     }
@@ -71,11 +81,12 @@ wss.on('connection', (socket, request)   => {
            
             else if(parsedMessage.type === "join"){ 
                 const roomId = parsedMessage.payload.roomId; 
-                
+                console.log(roomId); 
                 let socketMap = roomToSocket.get(roomId); 
                 const room = await prisma.room.findFirst({where:{id:roomId}}); 
                 if(!room){ 
-                    socket.send("Room doesnt exist! Please create a room first!"); 
+                    socket.send("Room doesnt exist! Please create a room first!");
+                    socket.close();  
                     return;
                 }
                 if(!socketMap) // room doesnt exist!
@@ -87,7 +98,8 @@ wss.on('connection', (socket, request)   => {
                 socketMap.set(socket,true);
                 
                 roomToSocket.set(roomId, socketMap); 
-                socket.send(`Welcom to ${room.slug}`)
+                console.log('user joined!'); 
+                socket.send('success')
                 
             }
             else if(parsedMessage.type === "leave"){ 
@@ -108,6 +120,11 @@ wss.on('connection', (socket, request)   => {
             }
             else if(parsedMessage.type === "chat"){ 
                 const message = parsedMessage.payload.message; 
+                const shape = parsedMessage.payload.shape; 
+                const startX = parsedMessage.payload.startX; 
+                const startY =  parsedMessage.payload.startY; 
+                const width = parsedMessage.payload.width; 
+                const height = parsedMessage.payload.height;
                 const roomId = parsedMessage.payload.roomId; 
     
                 const socketMap = roomToSocket.get(roomId); 
@@ -120,10 +137,18 @@ wss.on('connection', (socket, request)   => {
                     return;
                 }
                 for(const [memberSocket, isPresent] of socketMap){ 
-                    if(memberSocket !== socket)memberSocket.send(message); 
+                    // if(memberSocket !== socket)memberSocket.send(message); 
+                    if(memberSocket!==socket)memberSocket.send(JSON.stringify({
+                            shape, 
+                            startX, 
+                            startY, 
+                            width, 
+                            height
+                        
+                    }));
                 }
     
-                await addMessageToDB(roomId, userId, message); 
+                await addMessageToDB(roomId, userId, startX, startY, width, height, height); 
     
     
             }

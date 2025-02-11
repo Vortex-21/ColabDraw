@@ -14,21 +14,6 @@ export function ErrorPage() {
         </p>
         <a className='w-[30%] px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors' href="http://localhost:3000/auth/signin">
         Sign in</a>
-        
-        {/* <div className="space-y-4">
-          <div className="bg-gray-50 p-4 rounded-md">
-            <h2 className="text-sm font-medium text-gray-900 mb-2">Why do we need cookies?</h2>
-            <p className="text-sm text-gray-600">
-              Cookies are essential for maintaining your session and ensuring a secure connection to our services.
-            </p>
-          </div>
-          <button
-            onClick={() => window.location.reload()}
-            className="w-full px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors"
-          >
-            Try Again
-          </button>
-        </div> */}
       </div>
     </div>
   );
