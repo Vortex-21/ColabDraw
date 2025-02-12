@@ -5,7 +5,7 @@ import { Drawable } from "roughjs/bin/core";
 
 enum Shapes {
   rectangle = "rectangle",
-  circle = "circle",
+  circle = "ellipse",
 }
 
 let history: Array<Drawable> = [];
@@ -50,7 +50,7 @@ export async function initDraw(
         });
       ;
     }
-    else if(metaData.shape === 'circle'){ 
+    else if(metaData.shape === 'ellipse'){ 
       return rc.ellipse(
         metaData.startX + metaData.width / 2,
         metaData.startY + metaData.height / 2,
@@ -74,6 +74,7 @@ export async function initDraw(
     let newShape:Drawable | null = makeDrawableObject(shapeMetaData);
     // newShape.shape = shapeMetaData.shape; 
     // newShape.x = shapeMetaData.startX;
+    console.log('newshape: ' + newShape); 
     if(newShape)
     {history.push(newShape);
     clearCanvas(ctx, canvas, rc);}

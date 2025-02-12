@@ -1,5 +1,5 @@
 "use client";
-import React, { MouseEventHandler, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 import axios from "axios";
 import { ToastContainer } from "react-toastify";
@@ -9,7 +9,7 @@ import { ErrorPage } from "./error";
 import { checkCookies } from "../utils/cookie-check";
 enum Shapes {
   rectangle = "rectangle",
-  circle = "circle",
+  circle = "ellipse",
 }
 
 export const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {

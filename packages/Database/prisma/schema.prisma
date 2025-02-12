@@ -52,7 +52,7 @@ model Geometry {
   id        Int      @id @default(autoincrement())
   roomId    Int
   userId    String
-  Shape     shapes
+  shape     shapes
   startX    Float
   startY    Float
   width     Float
