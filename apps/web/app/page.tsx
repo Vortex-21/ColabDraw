@@ -1,7 +1,5 @@
 import styles from "./page.module.css";
 
-import { Button } from "@repo/ui/button";
-import SignUp from "./components/signup";
 
 
 
@@ -10,7 +8,6 @@ import UsersIcon from "./icons/UsersIcon";
 import LightningIcon from "./icons/LightningIcon";
 import ShareIcon from "./icons/ShareIcon";
 import Logo from "./icons/Logo";
-import { redirect} from "next/navigation"
 import Link from "next/link";
 // import { Link } from "lucide-react";
 // import { PenLine, Users, Zap, Share2, Palette } from 'lucide-react';

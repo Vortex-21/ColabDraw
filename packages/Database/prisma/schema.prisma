@@ -13,6 +13,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum shapes {
+  rectangle
+  ellipse
+}
+
 model User {
   id         String     @id @default(uuid())
   email      String     @unique
@@ -43,10 +48,6 @@ model Chat {
   createdAt DateTime @default(now())
 }
 
-enum shapes {
-  rectangle
-  circle
-}
 
 model Geometry {
   id        Int      @id @default(autoincrement())
@@ -57,7 +58,7 @@ model Geometry {
   startY    Float
   width     Float
   height    Float
-  color     String
+  color     String? 
   room      Room     @relation(fields: [roomId], references: [id])
   user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())

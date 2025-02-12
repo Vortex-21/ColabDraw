@@ -25,13 +25,10 @@ export const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
       ctx.fillStyle = "rgba(0,0,0)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       initDraw(roomId, canvas, selectedShape, ws);
-      console.log("called 1");
     }
   }, [selectedShape]);
 
   useEffect(() => {
-    console.log("called-2");
-    // const prevData =  getPrevData();
 
     checkCookies(setIsAuthenticated);
 
@@ -59,22 +56,7 @@ export const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
     notify("ShareId copied to clipboard!", true);
   }
 
-  // async function startSessionHandler(e: any) {
-  //   e.preventDefault();
-  //   if (ws.readyState === ws.OPEN) {
-  //     ws.send(
-  //       JSON.stringify({
-  //         type: "join",
-  //         payload: {
-  //           roomId: roomId,
-  //         },
-  //       })
-  //     );
-  //   }
-  //   // else{ 
-  //   //   notify("Cannot join session. Please reload the session", false);
-  //   // }
-  // }
+  
 
   return isAuthenticated ? (
     <div className="flex flex-col justify-center items-center gap-1p-2">

@@ -119,7 +119,7 @@ wss.on('connection', (socket, request)   => {
     
             }
             else if(parsedMessage.type === "chat"){ 
-                const message = parsedMessage.payload.message; 
+                // const message = parsedMessage.payload.message; 
                 const shape = parsedMessage.payload.shape; 
                 const startX = parsedMessage.payload.startX; 
                 const startY =  parsedMessage.payload.startY; 
@@ -148,7 +148,7 @@ wss.on('connection', (socket, request)   => {
                     }));
                 }
     
-                await addMessageToDB(roomId, userId, startX, startY, width, height, height); 
+                await addMessageToDB(roomId, userId, startX, startY, width, height, shape); 
     
     
             }

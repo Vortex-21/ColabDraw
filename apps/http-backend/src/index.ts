@@ -7,9 +7,9 @@ import prisma from "@repo/Database/prismaClient";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { v2 } from "cloudinary";
-import {config} from 'dotenv'
-import { v5 as uuidv5 } from 'uuid'; 
-config(); 
+import { config } from "dotenv";
+import { v5 as uuidv5 } from "uuid";
+config();
 const app = express();
 
 app.use(express.urlencoded({ extended: true }));
@@ -31,7 +31,6 @@ app.post("/api/v1/signup", async (req, res) => {
           username: parsedData.data.username,
           password: parsedData.data.password,
           email: parsedData.data.email,
-          
         },
       });
       res.status(200).json({
@@ -84,7 +83,7 @@ app.post("/api/v1/signin", async (req, res) => {
 });
 
 app.post("/api/v1/create-room", auth, async (req, res) => {
-  console.log('Create room Marker'); 
+  console.log("Create room Marker");
   try {
     const adminId = req.id;
     // const { slug } = req.body;
@@ -98,8 +97,8 @@ app.post("/api/v1/create-room", auth, async (req, res) => {
     if (!adminId) {
       throw new Error("No admin found!");
     }
-    const hashed_slug = uuidv5(parsedData.data.slug,adminId); 
-    console.log('Hashed data: ' + hashed_slug);
+    const hashed_slug = uuidv5(parsedData.data.slug, adminId);
+    console.log("Hashed data: " + hashed_slug);
     const newRoom = await prisma.room.create({
       data: {
         adminId,
@@ -111,12 +110,11 @@ app.post("/api/v1/create-room", auth, async (req, res) => {
       message: "created room!",
       roomId: newRoom.id,
     });
-  } 
-  catch (err: any) {
-    if(err.code === 'P2002'){ 
-      res.status(409).json({ 
-        message:'A Room already exists with the same name.', 
-      })
+  } catch (err: any) {
+    if (err.code === "P2002") {
+      res.status(409).json({
+        message: "A Room already exists with the same name.",
+      });
       return;
     }
     console.log("Error Creating Room: " + err);
@@ -126,42 +124,44 @@ app.post("/api/v1/create-room", auth, async (req, res) => {
   }
 });
 
-app.post('/api/v1/get-room-id', auth, async(req,res) => { 
-  const {unique_room_id }= req.body; 
-  const room = await prisma.room.findFirst({where:{slug:unique_room_id}});
-  res.status(200).json({ 
-    message:room.id
-  })
-})
+app.post("/api/v1/get-room-id", auth, async (req, res) => {
+  const { unique_room_id } = req.body;
+  const room = await prisma.room.findFirst({ where: { slug: unique_room_id } });
+  res.status(200).json({
+    message: room.id,
+  });
+});
 
-
-app.get("/api/v1/geometryHistory/:roomId", async(req,res) => {
+app.get("/api/v1/geometryHistory/:roomId", auth, async (req, res) => {
   const roomId = Number(req.params.roomId);
 
-  try{const geometryHistory = await prisma.geometry.findMany({ 
-    where:{
-      roomId
-    }
-  }); 
-  res.status(200).json({
-    geometryHistory,
-  });}
-  catch(err:any){ 
+  try {
+    const geometryHistory = await prisma.geometry.findMany({
+      where: {
+        roomId,
+      },
+    });
+    console.log('prisma response : ', geometryHistory); 
+    // let geometryHistory = {shape:response.shape, startX: response.startX, startY: response.startY, width: response.width, height: response.height}; 
+    console.log(geometryHistory);
+    res.status(200).json({
+      geometryHistory,
+    });
+  } catch (err: any) {
     console.log("Error fetching geometry history: " + err);
     res.status(500).json({
       message: "Internal Server Error",
     });
   }
-})
+});
 
-app.post('/api/v1/share-room',auth, async(req,res) => { 
-  const {roomId} = req.body; 
-  const room = await prisma.room.findFirst({where:{id:roomId}}); 
-  res.status(200).json({ 
+app.post("/api/v1/share-room", auth, async (req, res) => {
+  const { roomId } = req.body;
+  const room = await prisma.room.findFirst({ where: { id: roomId } });
+  res.status(200).json({
     shareId: room.slug,
-  })
-
-})
+  });
+});
 
 app.get("/api/v1/chathistory/:roomId", async (req, res) => {
   const roomId = Number(req.params.roomId);
@@ -204,7 +204,7 @@ app.get("/api/v1/sign-cloudinary", async (req, res) => {
     const signature = v2.utils.api_sign_request(
       {
         timestamp: timestamp,
-        folder:'colabdraw'
+        folder: "colabdraw",
       },
       process.env.CLOUDINARY_API_SECRET
     );
@@ -215,7 +215,6 @@ app.get("/api/v1/sign-cloudinary", async (req, res) => {
       signature,
     });
   } catch (err: any) {
-    
     console.log("Error cloudinary signing: " + err);
     res.status(500).json({
       message: "Internal Server Error.",

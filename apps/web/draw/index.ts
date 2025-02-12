@@ -10,7 +10,7 @@ enum Shapes {
 
 let history: Array<Drawable> = [];
 let finalShape: Drawable | null = null;
-interface ShapeMetaDataInterface{ 
+interface ShapeMetaDataInterface {
   startX: number;
   startY: number;
   width: number;
@@ -21,25 +21,38 @@ export async function initDraw(
   roomId: number,
   canvas: HTMLCanvasElement,
   selectedShape: Shapes,
-  ws:WebSocket,
-  
+  ws: WebSocket
 ) {
-  const response = await axios.get(`http://localhost:3002/api/v1/geometryHistory/${roomId}`); 
-  if(response.status === 200){
-    if(response.data.geometryHistory.length > 0)history = history.concat(response.data.geometryHistory); 
+  const rc = rough.canvas(canvas);
+  const response = await axios.get(
+    `http://localhost:3002/api/v1/geometryHistory/${roomId}`,
+    { withCredentials: true }
+  );
+  if (response.status === 200) {
+    if (response.data.geometryHistory.length > 0) {
+      response.data.geometryHistory.forEach((el: any) => {
+        const newShape = makeDrawableObject({shape:el.shape, startX:el.startX, startY:el.startY, width:el.width, height:el.height}); 
+        console.log('new shape: ' + newShape); 
+        if (newShape) history.push(newShape);
+      });
+      // history = history.concat(response.data.geometryHistory);
+    }
   }
-  
-  
+
   // console.log(prevData);
   // console.log("shape: ", selectedShape);
-  const rc = rough.canvas(canvas);
   let ctx = canvas.getContext("2d");
   if (!ctx) {
     return;
   }
-  function makeDrawableObject(metaData:ShapeMetaDataInterface){ 
-    if(metaData.shape === 'rectangle'){ 
-      return rc.rectangle(metaData.startX, metaData.startY, metaData.width, metaData.height, {
+  function makeDrawableObject(metaData: ShapeMetaDataInterface) {
+    if (metaData.shape === "rectangle") {
+      return rc.rectangle(
+        metaData.startX,
+        metaData.startY,
+        metaData.width,
+        metaData.height,
+        {
           roughness: 1,
           stroke: "red",
           strokeWidth: 1,
@@ -47,10 +60,9 @@ export async function initDraw(
           fillStyle: "hachure",
           hachureAngle: 30,
           hachureGap: 45,
-        });
-      ;
-    }
-    else if(metaData.shape === 'ellipse'){ 
+        }
+      );
+    } else if (metaData.shape === "ellipse") {
       return rc.ellipse(
         metaData.startX + metaData.width / 2,
         metaData.startY + metaData.height / 2,
@@ -67,22 +79,23 @@ export async function initDraw(
         }
       );
     }
-    return null; 
+    return null;
   }
   ws.onmessage = (event) => {
-    const shapeMetaData = JSON.parse(event.data.toString()); 
-    let newShape:Drawable | null = makeDrawableObject(shapeMetaData);
-    // newShape.shape = shapeMetaData.shape; 
+    const shapeMetaData = JSON.parse(event.data.toString());
+    let newShape: Drawable | null = makeDrawableObject(shapeMetaData);
+    // newShape.shape = shapeMetaData.shape;
     // newShape.x = shapeMetaData.startX;
-    console.log('newshape: ' + newShape); 
-    if(newShape)
-    {history.push(newShape);
-    clearCanvas(ctx, canvas, rc);}
-  }
+    console.log("newshape: " + newShape);
+    if (newShape) {
+      history.push(newShape);
+      clearCanvas(ctx, canvas, rc);
+    }
+  };
   let startX = 0,
     startY = 0;
   let clicked: boolean = false;
-  let drag:boolean = false;
+  let drag: boolean = false;
   let width = 0,
     height = 0;
   history.forEach((el: Drawable) => rc.draw(el));
@@ -95,11 +108,10 @@ export async function initDraw(
 
   canvas.onmousemove = (e: MouseEvent) => {
     if (clicked) {
-      
       width = e.offsetX - startX;
       height = e.offsetY - startY;
-      if(width || height){ 
-        drag=true;
+      if (width || height) {
+        drag = true;
       }
       clearCanvas(ctx, canvas, rc);
       if (selectedShape == Shapes.rectangle) {
@@ -143,28 +155,26 @@ export async function initDraw(
     // if(finalShape!==null)
 
     history.push(finalShape);
-    drag=false; 
+    drag = false;
     // ws.onopen = () => {
-      // console.log("Connected to websocket server");
-      // console.log("Sending history");
-      ws.send(
-        JSON.stringify({
-          type: "chat",
-          payload: {
-            message: "Drawing",
-            roomId:roomId,
-            shape: finalShape?.shape,
-            startX,
-            startY,
-            width,
-            height,
-          },
-        })
-      );
-      finalShape = null;
+    // console.log("Connected to websocket server");
+    // console.log("Sending history");
+    ws.send(
+      JSON.stringify({
+        type: "chat",
+        payload: {
+          message: "Drawing",
+          roomId: roomId,
+          shape: finalShape?.shape,
+          startX,
+          startY,
+          width,
+          height,
+        },
+      })
+    );
+    finalShape = null;
     // };
-    
-    
   };
   ws.onerror = (err: Event) => {
     console.log("Error sending drawing data: " + err);
