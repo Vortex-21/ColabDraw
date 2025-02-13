@@ -20,10 +20,12 @@ interface ShapeMetaDataInterface {
 export async function initDraw(
   roomId: number,
   canvas: HTMLCanvasElement,
+  overlayCanvas: HTMLCanvasElement,
   selectedShape: Shapes,
   ws: WebSocket
 ) {
   const rc = rough.canvas(canvas);
+  const rcOverlay = rough.canvas(overlayCanvas);
   const response = await axios.get(
     `http://localhost:3002/api/v1/geometryHistory/${roomId}`,
     { withCredentials: true }
@@ -42,7 +44,8 @@ export async function initDraw(
   // console.log(prevData);
   // console.log("shape: ", selectedShape);
   let ctx = canvas.getContext("2d");
-  if (!ctx) {
+  let overlayCtx = overlayCanvas.getContext('2d'); 
+  if (!ctx || !overlayCtx) {
     return;
   }
   function makeDrawableObject(metaData: ShapeMetaDataInterface) {
@@ -89,33 +92,41 @@ export async function initDraw(
     console.log("newshape: " + newShape);
     if (newShape) {
       history.push(newShape);
-      clearCanvas(ctx, canvas, rc);
+      // clearCanvas(ctx, canvas, rc);
+      rc.draw(newShape);
     }
   };
-  let startX = 0,
-    startY = 0;
+  let startX = 0,startY = 0;
   let clicked: boolean = false;
   let drag: boolean = false;
   let width = 0,
     height = 0;
   history.forEach((el: Drawable) => rc.draw(el));
-  canvas.onmousedown = (e: MouseEvent) => {
+  // canvas.onmousedown = (e: MouseEvent) => {
+  //   clicked = true;
+
+  //   startX = e.offsetX;
+  //   startY = e.offsetY;
+  // };
+
+  overlayCanvas.onmousedown = (e: MouseEvent) => {
     clicked = true;
 
     startX = e.offsetX;
     startY = e.offsetY;
   };
 
-  canvas.onmousemove = (e: MouseEvent) => {
+  overlayCanvas.onmousemove = (e: MouseEvent) => {
     if (clicked) {
       width = e.offsetX - startX;
       height = e.offsetY - startY;
       if (width || height) {
         drag = true;
       }
-      clearCanvas(ctx, canvas, rc);
+      // clearCanvas(ctx, canvas, rc);
+      overlayCtx.clearRect(0,0,overlayCanvas.width,overlayCanvas.height); 
       if (selectedShape == Shapes.rectangle) {
-        const rect = rc.rectangle(startX, startY, width, height, {
+        const rect = rcOverlay.rectangle(startX, startY, width, height, {
           roughness: 1,
           stroke: "red",
           strokeWidth: 1,
@@ -125,8 +136,9 @@ export async function initDraw(
           hachureGap: 45,
         });
         finalShape = rect;
+        rcOverlay.draw(rect);
       } else if (selectedShape == Shapes.circle) {
-        const circle = rc.ellipse(
+        const circle = rcOverlay.ellipse(
           startX + width / 2,
           startY + height / 2,
           width,
@@ -142,18 +154,19 @@ export async function initDraw(
           }
         );
         finalShape = circle;
+        rcOverlay.draw(circle);
       }
     }
   };
 
-  canvas.onmouseup = (e: MouseEvent) => {
+  overlayCanvas.onmouseup = (e: MouseEvent) => {
     clicked = false;
     console.log("finalshape: ", finalShape);
     if (!finalShape || !drag) {
       return;
     }
     // if(finalShape!==null)
-
+    rc.draw(finalShape); 
     history.push(finalShape);
     drag = false;
     // ws.onopen = () => {

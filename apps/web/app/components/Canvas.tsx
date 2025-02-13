@@ -14,17 +14,19 @@ enum Shapes {
 
 export const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const overlayCanvasRef= useRef<HTMLCanvasElement | null>(null);
   const [selectedShape, setSelectedShape] = useState<Shapes>(Shapes.rectangle);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
   useEffect(() => {
-    if (canvasRef.current) {
+    if (canvasRef.current && overlayCanvasRef.current) {
       const canvas = canvasRef.current;
       const ctx = canvas.getContext("2d");
-      if (!ctx || !roomId ) return;
+      const overlayCanvas = overlayCanvasRef.current; 
+      if (!ctx || !roomId ||!overlayCanvas) return;
 
       ctx.fillStyle = "rgba(0,0,0)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      initDraw(roomId, canvas, selectedShape, ws);
+      initDraw(roomId, canvas, overlayCanvas, selectedShape, ws);
     }
   }, [selectedShape]);
 
@@ -34,14 +36,15 @@ export const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
 
     if (canvasRef.current) {
       const canvas = canvasRef.current;
+      const overlayCanvas = overlayCanvasRef.current;
       const ctx = canvas.getContext("2d");
-      if (!ctx) return;
+      if (!ctx || !roomId || !overlayCanvas) return;
+      // if (!roomId) return;
 
       ctx.fillStyle = "rgba(0,0,0)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      if (!roomId) return;
 
-      initDraw(roomId, canvas, selectedShape, ws);
+      initDraw(roomId, canvas, overlayCanvas, selectedShape, ws);
     }
   }, [canvasRef]);
 
@@ -59,12 +62,12 @@ export const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
   
 
   return isAuthenticated ? (
-    <div className="flex flex-col justify-center items-center gap-1p-2">
+    <div className="flex  justify-center items-center gap-1p-2">
       <ToastContainer />
-      <nav className="w-full bg-red-900">
-        <div>
+      <nav className="rounded-lg py-2 px-4 w-[30%] bg-white z-20 absolute top-5 left-[50%] translate-x-[-50%]">
+        <div className="flex items-center justify-evenly">
           <div
-            className={`${selectedShape === Shapes.rectangle ? "bg-white" : ""}`}
+            className={`${selectedShape === Shapes.rectangle ? "bg-white" : ""} border rounded-lg py-2 px-4`}
             onClick={(e) => {
               setSelectedShape(Shapes.rectangle);
             }}
@@ -73,14 +76,14 @@ export const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
           </div>
 
           <div
-            className={`${selectedShape === Shapes.circle ? "bg-white" : ""}`}
+            className={`${selectedShape === Shapes.circle ? "bg-white" : ""} border rounded-lg py-2 px-4`}
             onClick={(e) => {
               setSelectedShape(Shapes.circle);
             }}
           >
             circle
           </div>
-          <div onClick={shareHandler}>Share</div>
+          <div onClick={shareHandler} className='border'>Share</div>
           {/* <button onClick={startSessionHandler}>Start Session</button> */}
         </div>
       </nav>
@@ -91,6 +94,14 @@ export const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
           width={window.innerWidth}
           height={window.innerHeight}
           id="drawingCanvas"
+        ></canvas>
+        <canvas
+          className="cursor-crosshair absolute  top-0 left-0 z-10"
+          ref={overlayCanvasRef}
+          width={window.innerWidth}
+          height={window.innerHeight}
+          id="overlayCanvas"
+          
         ></canvas>
       </div>
     </div>
