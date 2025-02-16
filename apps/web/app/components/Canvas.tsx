@@ -1,6 +1,5 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
-
 import axios from "axios";
 import { ToastContainer } from "react-toastify";
 import { initDraw } from "../../draw";
@@ -13,10 +12,22 @@ enum Shapes {
 }
 
 export const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
+  // const windowSize = useWindowSize();
+  // console.log("windowSize : ", windowSize); 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const overlayCanvasRef= useRef<HTMLCanvasElement | null>(null);
   const [selectedShape, setSelectedShape] = useState<Shapes>(Shapes.rectangle);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
+  const [canvasSize, setCanvasSize] = useState<{ width: number; height: number } | null>(null);
+
+  useEffect(() => {
+    if (!canvasSize) {
+      setCanvasSize({
+        width: window.innerWidth, 
+        height: window.innerHeight
+      });
+    }
+  }, [canvasSize]);
   useEffect(() => {
     if (canvasRef.current && overlayCanvasRef.current) {
       const canvas = canvasRef.current;
@@ -46,6 +57,7 @@ export const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
 
       initDraw(roomId, canvas, overlayCanvas, selectedShape, ws);
     }
+    // console.log("Dimensions : ", windowSize.width, windowSize.height);
   }, [canvasRef]);
 
   async function shareHandler() {
@@ -89,17 +101,17 @@ export const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
       </nav>
       <div className="w-full min-h-screen">
         <canvas
-          className="cursor-crosshair"
+          className="cursor-crosshair bg-black"
           ref={canvasRef}
-          width={window.innerWidth}
-          height={window.innerHeight}
+          width={canvasSize?.width}
+          height={canvasSize?.height}
           id="drawingCanvas"
         ></canvas>
         <canvas
           className="cursor-crosshair absolute  top-0 left-0 z-10"
           ref={overlayCanvasRef}
-          width={window.innerWidth}
-          height={window.innerHeight}
+          width={canvasSize?.width}
+          height={canvasSize?.height}
           id="overlayCanvas"
           
         ></canvas>
