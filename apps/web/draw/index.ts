@@ -1,7 +1,10 @@
 import axios from "axios";
+import { useContext } from "react";
 import rough from "roughjs";
 import { RoughCanvas } from "roughjs/bin/canvas";
 import { Drawable } from "roughjs/bin/core";
+import { globalContext} from "../app/context/GlobalContext";
+// import { useGlobalContext } from "../app/context/useGlobalContext";
 
 enum Shapes {
   rectangle = "rectangle",
@@ -10,6 +13,8 @@ enum Shapes {
 
 let history: Array<Drawable> = [];
 let finalShape: Drawable | null = null;
+let pointerCache:Array<PointerEvent> = []; 
+let prevDiff:number = -1; 
 interface ShapeMetaDataInterface {
   startX: number;
   startY: number;
@@ -17,13 +22,22 @@ interface ShapeMetaDataInterface {
   height: number;
   shape: Shapes;
 }
+
+
+
+
 export async function initDraw(
   roomId: number,
   canvas: HTMLCanvasElement,
   overlayCanvas: HTMLCanvasElement,
-  selectedShape: Shapes,
+  
   ws: WebSocket
 ) {
+
+  // const {tool} = useGlobalContext(); 
+  const context = useContext(globalContext); 
+  if(!context)return;
+  const {tool} = context; 
   const rc = rough.canvas(canvas);
   const rcOverlay = rough.canvas(overlayCanvas);
   const response = await axios.get(
@@ -41,13 +55,29 @@ export async function initDraw(
     }
   }
 
+  
+
+
+
+
+
   // console.log(prevData);
-  // console.log("shape: ", selectedShape);
+  // console.log("shape: ", tool);
   let ctx = canvas.getContext("2d");
   let overlayCtx = overlayCanvas.getContext('2d'); 
   if (!ctx || !overlayCtx) {
     return;
   }
+
+  
+
+  
+
+
+
+
+
+
   function makeDrawableObject(metaData: ShapeMetaDataInterface) {
     if (metaData.shape === "rectangle") {
       return rc.rectangle(
@@ -84,6 +114,7 @@ export async function initDraw(
     }
     return null;
   }
+
   ws.onmessage = (event) => {
     const shapeMetaData = JSON.parse(event.data.toString());
     let newShape: Drawable | null = makeDrawableObject(shapeMetaData);
@@ -99,15 +130,9 @@ export async function initDraw(
   let startX = 0,startY = 0;
   let clicked: boolean = false;
   let drag: boolean = false;
-  let width = 0,
-    height = 0;
+  let width = 0,height = 0;
   history.forEach((el: Drawable) => rc.draw(el));
-  // canvas.onmousedown = (e: MouseEvent) => {
-  //   clicked = true;
-
-  //   startX = e.offsetX;
-  //   startY = e.offsetY;
-  // };
+ 
 
   overlayCanvas.onmousedown = (e: MouseEvent) => {
     clicked = true;
@@ -125,7 +150,7 @@ export async function initDraw(
       }
       // clearCanvas(ctx, canvas, rc);
       overlayCtx.clearRect(0,0,overlayCanvas.width,overlayCanvas.height); 
-      if (selectedShape == Shapes.rectangle) {
+      if (tool == Shapes.rectangle) {
         const rect = rcOverlay.rectangle(startX, startY, width, height, {
           roughness: 1,
           stroke: "red",
@@ -137,7 +162,7 @@ export async function initDraw(
         });
         finalShape = rect;
         rcOverlay.draw(rect);
-      } else if (selectedShape == Shapes.circle) {
+      } else if (tool == Shapes.circle) {
         const circle = rcOverlay.ellipse(
           startX + width / 2,
           startY + height / 2,
@@ -169,9 +194,7 @@ export async function initDraw(
     rc.draw(finalShape); 
     history.push(finalShape);
     drag = false;
-    // ws.onopen = () => {
-    // console.log("Connected to websocket server");
-    // console.log("Sending history");
+    
     ws.send(
       JSON.stringify({
         type: "chat",
@@ -187,7 +210,7 @@ export async function initDraw(
       })
     );
     finalShape = null;
-    // };
+    
   };
   ws.onerror = (err: Event) => {
     console.log("Error sending drawing data: " + err);
