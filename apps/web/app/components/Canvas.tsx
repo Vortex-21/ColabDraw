@@ -15,20 +15,20 @@
 
 // export const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
 //   // const windowSize = useWindowSize();
-//   // console.log("windowSize : ", windowSize); 
+//   // console.log("windowSize : ", windowSize);
 //   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 //   const overlayCanvasRef= useRef<HTMLCanvasElement | null>(null);
 //   // const [selectedShape, setSelectedShape] = useState<Shapes>(Shapes.rectangle);
 //   const context = useContext(globalContext);
-//   if(!context)return; 
-//   const {tool, setTool} =context;  
+//   if(!context)return;
+//   const {tool, setTool} =context;
 //   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
 //   const [canvasSize, setCanvasSize] = useState<{ width: number; height: number } | null>(null);
 
 //   useEffect(() => {
 //     if (!canvasSize) {
 //       setCanvasSize({
-//         width: window.innerWidth, 
+//         width: window.innerWidth,
 //         height: window.innerHeight
 //       });
 //     }
@@ -38,7 +38,7 @@
 //   //   if (canvasRef.current && overlayCanvasRef.current) {
 //   //     const canvas = canvasRef.current;
 //   //     const ctx = canvas.getContext("2d");
-//   //     const overlayCanvas = overlayCanvasRef.current; 
+//   //     const overlayCanvas = overlayCanvasRef.current;
 //   //     if (!ctx || !roomId ||!overlayCanvas) return;
 
 //   //     ctx.fillStyle = "rgba(0,0,0)";
@@ -76,8 +76,6 @@
 //     window.navigator.clipboard.writeText(response.data.shareId);
 //     notify("ShareId copied to clipboard!", true);
 //   }
-
-  
 
 //   return isAuthenticated ? (
 //     <div className="flex  justify-center items-center gap-1p-2">
@@ -119,7 +117,7 @@
 //           width={canvasSize?.width}
 //           height={canvasSize?.height}
 //           id="overlayCanvas"
-          
+
 //         ></canvas>
 //       </div>
 //     </div>
@@ -129,174 +127,241 @@
 // };
 // export default Canvas;
 
-
-
-import React, { MouseEventHandler, useEffect, useRef, useState } from 'react'
-interface shapeMetaData { 
-  x:number; 
-  y:number; 
-  width:number; 
-  height:number;
+import React, { MouseEventHandler, useEffect, useRef, useState } from "react";
+interface shapeMetaData {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
-const Canvas = ({roomId, ws}:{roomId:number, ws:WebSocket}) => {
-  
-  
-  
-  const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null); 
-  const mainCanvasRef = useRef<HTMLCanvasElement | null>(null); 
-  
-  
-  const [canvasSize, setCanvasSize] = useState<{width:number, height:number}|null>(null)
-  const [isDrawing, setIsDrawing] = useState(false); 
-  const [drawStartCoords, setDrawStartCoords] = useState({x:0, y:0}); 
-  const [tool, setTool] = useState('draw'); 
-  const [dimensions, setDimensions] = useState({width:0, height:0}); 
-  const [hist, setHist] = useState<Array<shapeMetaData>>([]); 
-  // const [panStartCoords, setPanStartCoords] = useState({x:0, y:0}); 
-  
+const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
+  const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const mainCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  const [canvasSize, setCanvasSize] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [drawStartCoords, setDrawStartCoords] = useState({ x: 0, y: 0 });
+  const [tool, setTool] = useState("draw");
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  const [hist, setHist] = useState<Array<shapeMetaData>>([]);
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStartCoords, setPanStartCoords] = useState({ x: 0, y: 0 });
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+
   useEffect(() => {
-    if(!canvasSize) {
+    if (!canvasSize) {
       setCanvasSize({
-        width: window.innerWidth, 
-        height: window.innerHeight
-      })
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
     }
-  }, [canvasSize]); 
+  }, [canvasSize]);
 
   useEffect(() => {
-    const overlayCanvas = overlayCanvasRef.current; 
-    if(!overlayCanvas)return; 
-    const overlayCtx = overlayCanvas.getContext('2d'); 
-    if(!overlayCtx)return; 
-
+    const mainCanvas = mainCanvasRef.current;
+    const overlayCanvas = overlayCanvasRef.current;
+    if (!overlayCanvas || !mainCanvas) return;
+    const overlayCtx = overlayCanvas.getContext("2d");
+    const mainCtx = mainCanvas.getContext("2d");
+    if (!overlayCtx || !mainCtx) return;
+    overlayCtx.save();
+    // mainCtx.save();
     overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-    overlayCtx.strokeStyle='red'; 
-    overlayCtx.lineWidth=2;
+    // mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+    overlayCtx.translate(panOffset.x, panOffset.y);
+    // mainCtx.translate(panOffset.x, panOffset.y);
+    overlayCtx.strokeStyle = "red";
+    // mainCtx.strokeStyle = 'blue';
+    overlayCtx.lineWidth = 2;
+    // mainCtx.lineWidth = 2;
     overlayCtx.beginPath();
     hist.forEach((el: shapeMetaData) => {
       overlayCtx.rect(el.x, el.y, el.width, el.height);
+      // mainCtx.rect(el.x, el.y, el.width, el.height);
       overlayCtx.stroke();
-    })  
-    //log the dimensions of the rectangle in the console 
-    console.log('Dimensions : ', dimensions.width, dimensions.height);
-    overlayCtx.rect(drawStartCoords.x, drawStartCoords.y, dimensions.width, dimensions.height);
-    overlayCtx.stroke(); 
-    overlayCtx.closePath(); 
+      // mainCtx.stroke();
+    });
+    //log the dimensions of the rectangle in the console
+    if (isDrawing) {
+      console.log("Dimensions : ", dimensions.width, dimensions.height);
+      overlayCtx.rect(
+        drawStartCoords.x,
+        drawStartCoords.y,
+        dimensions.width,
+        dimensions.height
+      );
+      overlayCtx.stroke();
+    }
+    overlayCtx.closePath();
+    overlayCtx.restore();
+    // mainCtx.restore();
+  }, [dimensions, panOffset]);
 
-    
-  }, [dimensions])
-
-
-
-  function getCurrMouseCoords(e:any){ 
-    return {x:e.clientX, y:e.clientY}; 
+  function getCurrMouseCoords(e: any) {
+    return { x: e.clientX - panOffset.x, y: e.clientY - panOffset.y };
   }
-  
-  function mouseDownHandler(e:any) {
+
+  function mouseDownHandler(e: any) {
     // e.preventDefault();
-    console.log('mouse down')
+    console.log("mouse down");
     const curr = getCurrMouseCoords(e);
-    if(tool === 'draw'){
-      setIsDrawing(true); 
+    if (tool === "draw") {
+      setIsDrawing(true);
       setDrawStartCoords(curr);
+    } else {
+      setIsPanning(true);
+      setPanStartCoords(curr);
     }
-    else{ 
-      
-    }
-
   }
 
-  function mouseMoveHandler(e:any) {
+  function mouseMoveHandler(e: any) {
     // e.preventDefault();
-    console.log('mouse move')
-    if(isDrawing){ 
-      const curr = getCurrMouseCoords(e);
+    console.log("mouse move");
+    const curr = getCurrMouseCoords(e);
+    if (isDrawing) {
       let width = curr.x - drawStartCoords.x;
       let height = curr.y - drawStartCoords.y;
 
-      if(width && height){ 
-        //provide the animation on the overlay canvas. 
-        setDimensions({width, height}); 
+      if (width && height) {
+        //provide the animation on the overlay canvas.
+        setDimensions({ width, height });
       }
-    }
-    else{ 
-
+    } else if (isPanning) {
+      setPanOffset({
+        x: e.clientX - panStartCoords.x,
+        y: e.clientY - panStartCoords.y,
+      });
     }
   }
 
-  function mouseUpHandler(e:any) {
+  function mouseUpHandler(e: any) {
     // e.preventDefault();
-    if(isDrawing){ 
-      setIsDrawing(false); 
-      const mainCanvas = mainCanvasRef.current; 
-      if(!mainCanvas)return;
-      const mainCtx = mainCanvas.getContext('2d'); 
-      if(!mainCtx)return; 
-
-      mainCtx.strokeStyle='red';
-      mainCtx.lineWidth=2;
-      mainCtx.rect(drawStartCoords.x, drawStartCoords.y, dimensions.width, dimensions.height);
+    const mainCanvas = mainCanvasRef.current;
+    const overlayCanvas = overlayCanvasRef.current;
+    if (!mainCanvas || !overlayCanvas) return;
+    const mainCtx = mainCanvas.getContext("2d");
+    const overlayCtx = overlayCanvas.getContext("2d");
+    if (!mainCtx || !overlayCtx) return;
+    if (isDrawing) {
+      setIsDrawing(false);
+      overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+      mainCtx.strokeStyle = "blue";
+      mainCtx.lineWidth = 2;
+      mainCtx.save();
+      mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height); //clear the main canvas.
+      mainCtx.translate(panOffset.x, panOffset.y);
+      mainCtx.beginPath();
+      hist.forEach((el) => {
+        mainCtx.rect(el.x, el.y, el.width, el.height);
+        mainCtx.stroke();
+      });
+      mainCtx.rect(
+        drawStartCoords.x,
+        drawStartCoords.y,
+        dimensions.width,
+        dimensions.height
+      );
       mainCtx.stroke();
+      mainCtx.closePath(); //end the path.
+      mainCtx.restore();
       setHist((prev) => {
-        return [...prev, {x:drawStartCoords.x, y:drawStartCoords.y, width:dimensions.width, height:dimensions.height}];  //store the shape in the history array.
-      })
+        return [
+          ...prev,
+          {
+            x: drawStartCoords.x,
+            y: drawStartCoords.y,
+            width: dimensions.width,
+            height: dimensions.height,
+          },
+        ]; //store the shape in the history array.
+      });
+    } else if (isPanning) {
+      setIsPanning(false);
+      overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); //clear the overlay canvas.
+      mainCtx.save();
+      mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+      mainCtx.translate(panOffset.x, panOffset.y);
+      mainCtx.strokeStyle = "blue";
+      mainCtx.lineWidth = 2;
+      hist.forEach((el) => {
+        mainCtx.beginPath();
+        mainCtx.rect(el.x, el.y, el.width, el.height);
+        mainCtx.stroke();
+        mainCtx.closePath(); //end the path.
+      });
+      mainCtx.restore();
     }
   }
-  
-  function mouseWheelHandler(e:any) {
-    // e.preventDefault();
-    console.log('mouse wheel')
-  }
-  
-  
-  
-  
-  
 
-  function changeToolHandler(e:any) {
+  function mouseWheelHandler(e: any) {
     // e.preventDefault();
-    console.log('change tool')
+    console.log("mouse wheel");
+  }
+
+  function changeToolHandler(e: any) {
+    // e.preventDefault();
+    console.log("change tool");
     setTool(e.target.id);
   }
 
-
-
   return (
-    <div className='w-screen h-screen'>
-      <nav className='flex justify-center items-center gap-4 px-4 py-2 rounded-lg z-20 bg-white text-black  absolute top-5 left-[50%] translate-x-[-50%]'>
-        <label htmlFor="draw" className={`border rounded-md px-4 py-2 ${tool === 'draw' ? 'bg-gray-500':'bg-white'}`}>Draw</label>
-        <input onChange={changeToolHandler} className = 'sr-only' type='radio' id='draw' name = 'tool'/>
-        
-        
-        
-        <label htmlFor="pointer" className={`border rounded-md px-4 py-2 ${tool === 'pointer' ? 'bg-gray-500':'bg-white'}`}>Pointer</label>
-        <input onChange={changeToolHandler} className='sr-only' type="radio" id='pointer'  name = 'tool'/>
+    <div className="w-screen h-screen">
+      <nav className="flex justify-center items-center gap-4 px-4 py-2 rounded-lg z-20 bg-white text-black  absolute top-5 left-[50%] translate-x-[-50%]">
+        <label
+          htmlFor="draw"
+          className={`border rounded-md px-4 py-2 ${tool === "draw" ? "bg-gray-500" : "bg-white"}`}
+        >
+          Draw
+        </label>
+        <input
+          onChange={changeToolHandler}
+          className="sr-only"
+          type="radio"
+          id="draw"
+          name="tool"
+        />
+
+        <label
+          htmlFor="pointer"
+          className={`border rounded-md px-4 py-2 ${tool === "pointer" ? "bg-gray-500" : "bg-white"}`}
+        >
+          Pointer
+        </label>
+        <input
+          onChange={changeToolHandler}
+          className="sr-only"
+          type="radio"
+          id="pointer"
+          name="tool"
+        />
       </nav>
       <canvas
-      id='overlay'
-      ref= {overlayCanvasRef}
-      className='z-10 bg-black absolute top-0 left-0'
-      onMouseDown={mouseDownHandler} 
-      onMouseMove={mouseMoveHandler} 
-      onMouseUp={mouseUpHandler}
-      onWheel={mouseWheelHandler}
-      width={canvasSize?.width}
-      height={canvasSize?.height}>
-        
-      </canvas>
+        id="overlay"
+        ref={overlayCanvasRef}
+        className="z-10 bg-transparent absolute top-0 left-0"
+        onMouseDown={mouseDownHandler}
+        onMouseMove={mouseMoveHandler}
+        onMouseUp={mouseUpHandler}
+        onWheel={mouseWheelHandler}
+        width={canvasSize?.width}
+        height={canvasSize?.height}
+      ></canvas>
       <canvas
-      id='main'
-      ref={mainCanvasRef}
-      className='bg-black touch-none'
-      onMouseDown={mouseDownHandler} 
-      onMouseMove={mouseMoveHandler} 
-      onMouseUp={mouseUpHandler}
-      onWheel={mouseWheelHandler}
-      width={canvasSize?.width}
-      height={canvasSize?.height}
+        id="main"
+        ref={mainCanvasRef}
+        className="bg-white touch-none"
+        onMouseDown={mouseDownHandler}
+        onMouseMove={mouseMoveHandler}
+        onMouseUp={mouseUpHandler}
+        onWheel={mouseWheelHandler}
+        width={canvasSize?.width}
+        height={canvasSize?.height}
       ></canvas>
     </div>
-  )
-}
+  );
+};
 
-export default Canvas
+export default Canvas;
