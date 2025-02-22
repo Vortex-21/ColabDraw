@@ -150,7 +150,8 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
   const [isPanning, setIsPanning] = useState(false);
   const [panStartCoords, setPanStartCoords] = useState({ x: 0, y: 0 });
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
-
+  const [scale, setScale] = useState(1);
+  const [scaleOffset, setScaleOffset] = useState({ x: 0, y: 0 });
   useEffect(() => {
     if (!canvasSize) {
       setCanvasSize({
@@ -167,26 +168,37 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
     const overlayCtx = overlayCanvas.getContext("2d");
     const mainCtx = mainCanvas.getContext("2d");
     if (!overlayCtx || !mainCtx) return;
+
+    const scaledHeight = mainCanvas.height * scale;
+    const scaledWidth = mainCanvas.width * scale;
+    setScaleOffset({ x: (scaledWidth - mainCanvas.width) / 2, y: (scaledHeight - mainCanvas.height) / 2 });
     overlayCtx.save();
-    // mainCtx.save();
+
+    mainCtx.save();
     overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-    // mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
-    overlayCtx.translate(panOffset.x, panOffset.y);
-    // mainCtx.translate(panOffset.x, panOffset.y);
+    mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+    overlayCtx.translate(panOffset.x*scale - ((scaledWidth-mainCanvas.width) / 2), panOffset.y*scale - ((scaledHeight-mainCanvas.height) / 2));
+    mainCtx.translate(panOffset.x*scale - ((scaledWidth-mainCanvas.width) / 2), panOffset.y*scale - ((scaledHeight-mainCanvas.height) / 2));
+    overlayCtx.scale(scale, scale);
+    mainCtx.scale(scale, scale);
     overlayCtx.strokeStyle = "red";
-    // mainCtx.strokeStyle = 'blue';
+    mainCtx.strokeStyle = 'blue';
     overlayCtx.lineWidth = 2;
-    // mainCtx.lineWidth = 2;
-    overlayCtx.beginPath();
+    mainCtx.lineWidth = 2;
     hist.forEach((el: shapeMetaData) => {
+      overlayCtx.beginPath();
       overlayCtx.rect(el.x, el.y, el.width, el.height);
-      // mainCtx.rect(el.x, el.y, el.width, el.height);
       overlayCtx.stroke();
-      // mainCtx.stroke();
+      overlayCtx.closePath(); 
+      mainCtx.beginPath();
+      mainCtx.rect(el.x, el.y, el.width, el.height);
+      mainCtx.stroke();
+      mainCtx.closePath(); 
     });
     //log the dimensions of the rectangle in the console
     if (isDrawing) {
       console.log("Dimensions : ", dimensions.width, dimensions.height);
+      overlayCtx.beginPath();
       overlayCtx.rect(
         drawStartCoords.x,
         drawStartCoords.y,
@@ -194,14 +206,25 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
         dimensions.height
       );
       overlayCtx.stroke();
+      overlayCtx.closePath();
     }
-    overlayCtx.closePath();
     overlayCtx.restore();
-    // mainCtx.restore();
-  }, [dimensions, panOffset]);
+    mainCtx.restore();
+  }, [dimensions, panOffset, scale]);
+  
+  
+  // useEffect(() => {
+  //   const overlayCanvas = overlayCanvasRef.current;
+  //   const mainCanvas = mainCanvasRef.current;
+  //   if(!mainCanvas || !overlayCanvas)return; 
+  //   console.log('Scaling factor:  ', scale); 
+    
 
+    
+
+  // }, [scale])
   function getCurrMouseCoords(e: any) {
-    return { x: e.clientX - panOffset.x, y: e.clientY - panOffset.y };
+    return { x: (e.clientX - panOffset.x*scale + scaleOffset.x)/scale, y: (e.clientY - panOffset.y*scale + scaleOffset.y)/scale };
   }
 
   function mouseDownHandler(e: any) {
@@ -213,7 +236,10 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
       setDrawStartCoords(curr);
     } else {
       setIsPanning(true);
-      setPanStartCoords(curr);
+      setPanStartCoords({
+        x: e.clientX - panOffset.x,
+        y: e.clientY - panOffset.y,
+      });
     }
   }
 
@@ -246,18 +272,22 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
     const overlayCtx = overlayCanvas.getContext("2d");
     if (!mainCtx || !overlayCtx) return;
     if (isDrawing) {
+      console.log("drawing done!")
       setIsDrawing(false);
       overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
       mainCtx.strokeStyle = "blue";
       mainCtx.lineWidth = 2;
       mainCtx.save();
-      mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height); //clear the main canvas.
-      mainCtx.translate(panOffset.x, panOffset.y);
-      mainCtx.beginPath();
-      hist.forEach((el) => {
-        mainCtx.rect(el.x, el.y, el.width, el.height);
-        mainCtx.stroke();
-      });
+      // mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height); //clear the main canvas.
+      mainCtx.translate(panOffset.x*scale - scaleOffset.x, panOffset.y*scale-scaleOffset.y);
+      mainCtx.scale(scale, scale); 
+      // hist.forEach((el) => {
+      //   mainCtx.beginPath();
+      //   mainCtx.rect(el.x, el.y, el.width, el.height);
+      //   mainCtx.stroke();
+      //   mainCtx.closePath(); //end the path.
+      // });
+      mainCtx.beginPath(); 
       mainCtx.rect(
         drawStartCoords.x,
         drawStartCoords.y,
@@ -278,12 +308,14 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
           },
         ]; //store the shape in the history array.
       });
-    } else if (isPanning) {
+    } else{
+      console.log("zoomed or panned!"); 
       setIsPanning(false);
       overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); //clear the overlay canvas.
       mainCtx.save();
       mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
-      mainCtx.translate(panOffset.x, panOffset.y);
+      mainCtx.translate(panOffset.x*scale - scaleOffset.x, panOffset.y*scale - scaleOffset.y);
+      mainCtx.scale(scale, scale); 
       mainCtx.strokeStyle = "blue";
       mainCtx.lineWidth = 2;
       hist.forEach((el) => {
@@ -299,6 +331,8 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
   function mouseWheelHandler(e: any) {
     // e.preventDefault();
     console.log("mouse wheel");
+    const zoomFactor = (e.deltaY < 0? 1.1 : 0.9);
+    setScale((prev) => Math.min(Math.max((prev * zoomFactor),0.5),2));
   }
 
   function changeToolHandler(e: any) {
