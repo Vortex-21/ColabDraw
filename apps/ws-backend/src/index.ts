@@ -99,7 +99,9 @@ wss.on('connection', (socket, request)   => {
                 
                 roomToSocket.set(roomId, socketMap); 
                 console.log('user joined!'); 
-                socket.send('success')
+                socket.send(JSON.stringify({
+                    status:"success"
+                }))
                 
             }
             else if(parsedMessage.type === "leave"){ 
@@ -139,6 +141,7 @@ wss.on('connection', (socket, request)   => {
                 for(const [memberSocket, isPresent] of socketMap){ 
                     // if(memberSocket !== socket)memberSocket.send(message); 
                     if(memberSocket!==socket)memberSocket.send(JSON.stringify({
+                            type:'geo', 
                             shape, 
                             startX, 
                             startY, 
@@ -148,7 +151,7 @@ wss.on('connection', (socket, request)   => {
                     }));
                 }
     
-                await addMessageToDB(roomId, userId, startX, startY, width, height, shape); 
+                // await addMessageToDB(roomId, userId, startX, startY, width, height, shape); 
     
     
             }

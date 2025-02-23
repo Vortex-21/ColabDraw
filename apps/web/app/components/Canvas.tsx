@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 interface shapeMetaData {
+  shape:string
   x: number;
   y: number;
   width: number;
@@ -42,29 +43,47 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
 
     const scaledHeight = mainCanvas.height * scale;
     const scaledWidth = mainCanvas.width * scale;
-    setScaleOffset({ x: (scaledWidth - mainCanvas.width) / 2, y: (scaledHeight - mainCanvas.height) / 2 });
+    setScaleOffset({
+      x: (scaledWidth - mainCanvas.width) / 2,
+      y: (scaledHeight - mainCanvas.height) / 2,
+    });
     overlayCtx.save();
-
     mainCtx.save();
+
     overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-    mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
-    overlayCtx.translate(panOffset.x*scale - ((scaledWidth-mainCanvas.width) / 2), panOffset.y*scale - ((scaledHeight-mainCanvas.height) / 2));
-    mainCtx.translate(panOffset.x*scale - ((scaledWidth-mainCanvas.width) / 2), panOffset.y*scale - ((scaledHeight-mainCanvas.height) / 2));
+    if (!isDrawing)
+      mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
+
+    overlayCtx.translate(
+      panOffset.x * scale - (scaledWidth - mainCanvas.width) / 2,
+      panOffset.y * scale - (scaledHeight - mainCanvas.height) / 2
+    );
+    if (!isDrawing)
+      mainCtx.translate(
+        panOffset.x * scale - (scaledWidth - mainCanvas.width) / 2,
+        panOffset.y * scale - (scaledHeight - mainCanvas.height) / 2
+      );
+
     overlayCtx.scale(scale, scale);
-    mainCtx.scale(scale, scale);
+    if (!isDrawing) mainCtx.scale(scale, scale);
+
     overlayCtx.strokeStyle = "red";
-    mainCtx.strokeStyle = 'red';
+    if (!isDrawing) mainCtx.strokeStyle = "red";
+
     overlayCtx.lineWidth = 2;
-    mainCtx.lineWidth = 2;
+    if (!isDrawing) mainCtx.lineWidth = 2;
+
     hist.forEach((el: shapeMetaData) => {
       overlayCtx.beginPath();
       overlayCtx.rect(el.x, el.y, el.width, el.height);
       overlayCtx.stroke();
-      overlayCtx.closePath(); 
-      mainCtx.beginPath();
-      mainCtx.rect(el.x, el.y, el.width, el.height);
-      mainCtx.stroke();
-      mainCtx.closePath(); 
+      overlayCtx.closePath();
+      if (!isDrawing) {
+        mainCtx.beginPath();
+        mainCtx.rect(el.x, el.y, el.width, el.height);
+        mainCtx.stroke();
+        mainCtx.closePath();
+      }
     });
     //log the dimensions of the rectangle in the console
     if (isDrawing) {
@@ -79,28 +98,54 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
       overlayCtx.stroke();
       overlayCtx.closePath();
     }
+
     overlayCtx.restore();
     mainCtx.restore();
   }, [dimensions, panOffset, scale]);
-  
-  
-  // useEffect(() => {
-  //   const overlayCanvas = overlayCanvasRef.current;
-  //   const mainCanvas = mainCanvasRef.current;
-  //   if(!mainCanvas || !overlayCanvas)return; 
-  //   console.log('Scaling factor:  ', scale); 
-    
 
-    
-
-  // }, [scale])
+  
   function getCurrMouseCoords(e: any) {
-    return { x: (e.clientX - panOffset.x*scale + scaleOffset.x)/scale, y: (e.clientY - panOffset.y*scale + scaleOffset.y)/scale };
+    return {
+      x: (e.clientX - panOffset.x * scale + scaleOffset.x) / scale,
+      y: (e.clientY - panOffset.y * scale + scaleOffset.y) / scale,
+    };
   }
+  ws.onmessage = (event) => { 
+    const mainCanvas = mainCanvasRef.current;
+    if(!mainCanvas)return; 
+    const mainCtx = mainCanvas.getContext("2d");
+    if(!mainCtx)return; 
+    const message = JSON.parse(event.data.toString());
+    console.log("Recieved message: " + JSON.stringify(message))
+    console.log("transformed coords: ", { 
+      startX: (message.startX-panOffset.x*scale + scaleOffset.x)/scale, 
+      startY: (message.startY-panOffset.y*scale + scaleOffset.y)/scale
+      ,width: message.width, 
+      height:message.height
+    })
+    if(message.type === "geo") {
+      mainCtx.beginPath();
+      mainCtx.strokeStyle = "red";
+      mainCtx.lineWidth = 2; 
+    //   mainCtx.rect((message.startX-panOffset.x*scale + scaleOffset.x)/scale, (message.startY-panOffset.y*scale+scaleOffset.y)/
+    // scale, message.width/scale, message.height/scale);
+      mainCtx.rect((message.startX*scale+panOffset.x*scale-scaleOffset.x),(message.startY*scale+panOffset.y*scale-scaleOffset.y), message.width*scale, message.height*scale);
+      // mainCtx.rect(message.startX, message.startY, message.width, message.height);
+      mainCtx.stroke();
+      mainCtx.closePath();
+      setHist([...hist, {shape: message.shape, x: message.startX, y: message.startY, width: message.width, height: message.height}]);
 
+    }
+    
+    
+
+  }
   function mouseDownHandler(e: any) {
     // e.preventDefault();
-    console.log("mouse down");
+    console.log("mouse down", {
+      x: e.clientX,
+      y: e.clientY,
+    });
     const curr = getCurrMouseCoords(e);
     if (tool === "draw") {
       setIsDrawing(true);
@@ -116,7 +161,10 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
 
   function mouseMoveHandler(e: any) {
     // e.preventDefault();
-    console.log("mouse move");
+    // console.log("mouse move: ", { 
+    //   x: e.clientX, 
+    //   y: e.clientY
+    // });
     const curr = getCurrMouseCoords(e);
     if (isDrawing) {
       let width = curr.x - drawStartCoords.x;
@@ -143,22 +191,20 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
     const overlayCtx = overlayCanvas.getContext("2d");
     if (!mainCtx || !overlayCtx) return;
     if (isDrawing) {
-      console.log("drawing done!")
+      console.log("drawing done!");
       setIsDrawing(false);
       overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
       mainCtx.strokeStyle = "red";
       mainCtx.lineWidth = 2;
       mainCtx.save();
       // mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height); //clear the main canvas.
-      mainCtx.translate(panOffset.x*scale - scaleOffset.x, panOffset.y*scale-scaleOffset.y);
-      mainCtx.scale(scale, scale); 
-      // hist.forEach((el) => {
-      //   mainCtx.beginPath();
-      //   mainCtx.rect(el.x, el.y, el.width, el.height);
-      //   mainCtx.stroke();
-      //   mainCtx.closePath(); //end the path.
-      // });
-      mainCtx.beginPath(); 
+      mainCtx.translate(
+        panOffset.x * scale - scaleOffset.x,
+        panOffset.y * scale - scaleOffset.y
+      );
+      mainCtx.scale(scale, scale);
+      
+      mainCtx.beginPath();
       mainCtx.rect(
         drawStartCoords.x,
         drawStartCoords.y,
@@ -168,10 +214,45 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
       mainCtx.stroke();
       mainCtx.closePath(); //end the path.
       mainCtx.restore();
+      // console.log("sending: ", { 
+      //   startX: (drawStartCoords.x*scale + panOffset.x*scale - scaleOffset.x),
+      //     startY: (drawStartCoords.y*scale + panOffset.y*scale - scaleOffset.y),
+      //     width: dimensions.width*scale,
+      //     height: dimensions.height*scale,
+      // })
+      // ws.send(JSON.stringify({ 
+      //   type: "chat",
+      //   payload: {
+      //     shape: "rectangle",
+      //     startX: (drawStartCoords.x*scale + panOffset.x*scale - scaleOffset.x),
+      //     startY: (drawStartCoords.y*scale + panOffset.y*scale - scaleOffset.y),
+      //     width: dimensions.width*scale,
+      //     height: dimensions.height*scale,
+      //     roomId:roomId
+      //   },
+      // }))
+      console.log("sending: ", { 
+        startX: (drawStartCoords.x),
+          startY: (drawStartCoords.y),
+          width: dimensions.width,
+          height: dimensions.height,
+      })
+      ws.send(JSON.stringify({ 
+        type: "chat",
+        payload: {
+          shape: "rectangle",
+          startX: drawStartCoords.x,
+          startY: drawStartCoords.y,
+          width: dimensions.width,
+          height: dimensions.height,
+          roomId: roomId
+        },
+      })); 
       setHist((prev) => {
         return [
           ...prev,
           {
+            shape:'rectangle', 
             x: drawStartCoords.x,
             y: drawStartCoords.y,
             width: dimensions.width,
@@ -179,14 +260,17 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
           },
         ]; //store the shape in the history array.
       });
-    } else{
-      console.log("zoomed or panned!"); 
+    } else {
+      console.log("zoomed or panned!");
       setIsPanning(false);
       overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); //clear the overlay canvas.
       mainCtx.save();
       mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
-      mainCtx.translate(panOffset.x*scale - scaleOffset.x, panOffset.y*scale - scaleOffset.y);
-      mainCtx.scale(scale, scale); 
+      mainCtx.translate(
+        panOffset.x * scale - scaleOffset.x,
+        panOffset.y * scale - scaleOffset.y
+      );
+      mainCtx.scale(scale, scale);
       mainCtx.strokeStyle = "red";
       mainCtx.lineWidth = 2;
       hist.forEach((el) => {
@@ -202,8 +286,8 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
   function mouseWheelHandler(e: any) {
     // e.preventDefault();
     console.log("mouse wheel");
-    const zoomFactor = (e.deltaY < 0? 1.1 : 0.9);
-    setScale((prev) => Math.min(Math.max((prev * zoomFactor),0.5),2));
+    const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+    setScale((prev) => Math.min(Math.max(prev * zoomFactor, 0.5), 2));
   }
 
   function changeToolHandler(e: any) {

@@ -15,7 +15,8 @@ const PreCanvas = () => {
         const websocketURL = 'ws://localhost:3001/?token='+Cookies.get('token'); 
         const conn = new WebSocket(websocketURL); 
         conn.onmessage = (event) => { 
-            if(event.data.toString() === 'success'){ 
+            const parsedMessage = JSON.parse(event.data.toString()); 
+            if(parsedMessage.status === 'success'){ 
                 setIsConnected(true);
             }
         }
