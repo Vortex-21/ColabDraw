@@ -127,10 +127,9 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
       mainCtx.beginPath();
       mainCtx.strokeStyle = "red";
       mainCtx.lineWidth = 2; 
-    //   mainCtx.rect((message.startX-panOffset.x*scale + scaleOffset.x)/scale, (message.startY-panOffset.y*scale+scaleOffset.y)/
-    // scale, message.width/scale, message.height/scale);
+    
       mainCtx.rect((message.startX*scale+panOffset.x*scale-scaleOffset.x),(message.startY*scale+panOffset.y*scale-scaleOffset.y), message.width*scale, message.height*scale);
-      // mainCtx.rect(message.startX, message.startY, message.width, message.height);
+      
       mainCtx.stroke();
       mainCtx.closePath();
       setHist([...hist, {shape: message.shape, x: message.startX, y: message.startY, width: message.width, height: message.height}]);
@@ -160,11 +159,7 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
   }
 
   function mouseMoveHandler(e: any) {
-    // e.preventDefault();
-    // console.log("mouse move: ", { 
-    //   x: e.clientX, 
-    //   y: e.clientY
-    // });
+    
     const curr = getCurrMouseCoords(e);
     if (isDrawing) {
       let width = curr.x - drawStartCoords.x;
@@ -214,23 +209,7 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
       mainCtx.stroke();
       mainCtx.closePath(); //end the path.
       mainCtx.restore();
-      // console.log("sending: ", { 
-      //   startX: (drawStartCoords.x*scale + panOffset.x*scale - scaleOffset.x),
-      //     startY: (drawStartCoords.y*scale + panOffset.y*scale - scaleOffset.y),
-      //     width: dimensions.width*scale,
-      //     height: dimensions.height*scale,
-      // })
-      // ws.send(JSON.stringify({ 
-      //   type: "chat",
-      //   payload: {
-      //     shape: "rectangle",
-      //     startX: (drawStartCoords.x*scale + panOffset.x*scale - scaleOffset.x),
-      //     startY: (drawStartCoords.y*scale + panOffset.y*scale - scaleOffset.y),
-      //     width: dimensions.width*scale,
-      //     height: dimensions.height*scale,
-      //     roomId:roomId
-      //   },
-      // }))
+      
       console.log("sending: ", { 
         startX: (drawStartCoords.x),
           startY: (drawStartCoords.y),
