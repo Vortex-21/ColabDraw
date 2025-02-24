@@ -151,7 +151,7 @@ wss.on('connection', (socket, request)   => {
                     }));
                 }
     
-                // await addMessageToDB(roomId, userId, startX, startY, width, height, shape); 
+                await addMessageToDB(roomId, userId, startX, startY, width, height, shape); 
     
     
             }

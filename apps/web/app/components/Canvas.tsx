@@ -1,3 +1,4 @@
+import axios from "axios";
 import React, { useEffect, useRef, useState } from "react";
 interface shapeMetaData {
   shape:string
@@ -24,6 +25,45 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [scale, setScale] = useState(1);
   const [scaleOffset, setScaleOffset] = useState({ x: 0, y: 0 });
+  useEffect(() => {
+    const mainCanvas = mainCanvasRef.current; 
+    if(!mainCanvas)return; 
+    const mainCtx = mainCanvas.getContext('2d'); 
+    if(!mainCtx)return; 
+
+
+    async function getHistory(){ 
+      const response = await axios.get(`http://localhost:3002/api/v1/geometryHistory/${roomId}`,{withCredentials: true});
+      console.log("response : ", response ); 
+      let geometryHistory = response.data.geometryHistory;
+      let historyData:Array<shapeMetaData> = []; 
+      geometryHistory.forEach((el:{startX:number, startY:number, width:number, height:number, shape:string}) => {
+        if(el.shape === 'rectangle'){historyData.push({
+          shape:el.shape,
+          x: el.startX,
+          y: el.startY,
+          width: el.width,
+          height: el.height, 
+        })
+        if(mainCtx){ 
+          mainCtx.strokeStyle = 'red'; 
+          mainCtx.lineWidth = 2; 
+
+          mainCtx.beginPath();
+          mainCtx.rect(el.startX, el.startY, el.width, el.height); 
+          mainCtx.stroke();
+          mainCtx.closePath();
+        }
+
+        
+      }
+      })  
+      console.log("history Data: ", historyData); 
+      setHist((prev) => {return [...prev, ...historyData]});
+    }
+    getHistory(); 
+  }, []); 
+
   useEffect(() => {
     if (!canvasSize) {
       setCanvasSize({
@@ -110,6 +150,7 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
       y: (e.clientY - panOffset.y * scale + scaleOffset.y) / scale,
     };
   }
+
   ws.onmessage = (event) => { 
     const mainCanvas = mainCanvasRef.current;
     if(!mainCanvas)return; 
@@ -139,6 +180,7 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
     
 
   }
+
   function mouseDownHandler(e: any) {
     // e.preventDefault();
     console.log("mouse down", {
