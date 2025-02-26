@@ -1,11 +1,12 @@
 import axios from "axios";
 import React, { useEffect, useRef, useState } from "react";
 interface shapeMetaData {
-  shape:string
+  shape: string;
   x: number;
   y: number;
   width: number;
   height: number;
+  text?: string;
 }
 const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -15,6 +16,7 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
     width: number;
     height: number;
   } | null>(null);
+  const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawStartCoords, setDrawStartCoords] = useState({ x: 0, y: 0 });
   const [tool, setTool] = useState("draw");
@@ -25,44 +27,57 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [scale, setScale] = useState(1);
   const [scaleOffset, setScaleOffset] = useState({ x: 0, y: 0 });
+  const [isWriting, setIsWriting] = useState(false);
+  const [writingCoords, setWritingCoords] = useState({ x: 0, y: 0 });
   useEffect(() => {
-    const mainCanvas = mainCanvasRef.current; 
-    if(!mainCanvas)return; 
-    const mainCtx = mainCanvas.getContext('2d'); 
-    if(!mainCtx)return; 
+    const mainCanvas = mainCanvasRef.current;
+    if (!mainCanvas) return;
+    const mainCtx = mainCanvas.getContext("2d");
+    if (!mainCtx) return;
 
-
-    async function getHistory(){ 
-      const response = await axios.get(`http://localhost:3002/api/v1/geometryHistory/${roomId}`,{withCredentials: true});
-      console.log("response : ", response ); 
+    async function getHistory() {
+      const response = await axios.get(
+        `http://localhost:3002/api/v1/geometryHistory/${roomId}`,
+        { withCredentials: true }
+      );
+      console.log("response : ", response);
       let geometryHistory = response.data.geometryHistory;
-      let historyData:Array<shapeMetaData> = []; 
-      geometryHistory.forEach((el:{startX:number, startY:number, width:number, height:number, shape:string}) => {
-        if(el.shape === 'rectangle'){historyData.push({
-          shape:el.shape,
-          x: el.startX,
-          y: el.startY,
-          width: el.width,
-          height: el.height, 
-        })
-        if(mainCtx){ 
-          mainCtx.strokeStyle = 'red'; 
-          mainCtx.lineWidth = 2; 
+      let historyData: Array<shapeMetaData> = [];
+      geometryHistory.forEach(
+        (el: {
+          startX: number;
+          startY: number;
+          width: number;
+          height: number;
+          shape: string;
+        }) => {
+          if (el.shape === "rectangle") {
+            historyData.push({
+              shape: el.shape,
+              x: el.startX,
+              y: el.startY,
+              width: el.width,
+              height: el.height,
+            });
+            if (mainCtx) {
+              mainCtx.strokeStyle = "red";
+              mainCtx.lineWidth = 2;
 
-          mainCtx.beginPath();
-          mainCtx.rect(el.startX, el.startY, el.width, el.height); 
-          mainCtx.stroke();
-          mainCtx.closePath();
+              mainCtx.beginPath();
+              mainCtx.rect(el.startX, el.startY, el.width, el.height);
+              mainCtx.stroke();
+              mainCtx.closePath();
+            }
+          }
         }
-
-        
-      }
-      })  
-      console.log("history Data: ", historyData); 
-      setHist((prev) => {return [...prev, ...historyData]});
+      );
+      console.log("history Data: ", historyData);
+      setHist((prev) => {
+        return [...prev, ...historyData];
+      });
     }
-    getHistory(); 
-  }, []); 
+    getHistory();
+  }, []);
 
   useEffect(() => {
     if (!canvasSize) {
@@ -114,15 +129,27 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
     if (!isDrawing) mainCtx.lineWidth = 2;
 
     hist.forEach((el: shapeMetaData) => {
-      overlayCtx.beginPath();
-      overlayCtx.rect(el.x, el.y, el.width, el.height);
-      overlayCtx.stroke();
-      overlayCtx.closePath();
-      if (!isDrawing) {
-        mainCtx.beginPath();
-        mainCtx.rect(el.x, el.y, el.width, el.height);
-        mainCtx.stroke();
-        mainCtx.closePath();
+      if (el.shape === "rectangle") {
+        overlayCtx.beginPath();
+        overlayCtx.rect(el.x, el.y, el.width, el.height);
+        overlayCtx.stroke();
+        overlayCtx.closePath();
+
+        if (!isDrawing) {
+          mainCtx.beginPath();
+          mainCtx.rect(el.x, el.y, el.width, el.height);
+          mainCtx.stroke();
+          mainCtx.closePath();
+        }
+      } else if (el.shape === "text" && el.text) {
+        overlayCtx.font = "18px Arial";
+        overlayCtx.fillStyle = "red";
+        overlayCtx.fillText(el.text, el.x, el.y);
+        if (!isDrawing) {
+          mainCtx.font = "18px Arial";
+          mainCtx.fillStyle = "red";
+          mainCtx.fillText(el.text, el.x, el.y);
+        }
       }
     });
     //log the dimensions of the rectangle in the console
@@ -143,7 +170,13 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
     mainCtx.restore();
   }, [dimensions, panOffset, scale]);
 
-  
+  useEffect(() => {
+    if (!textAreaRef.current) return;
+    textAreaRef.current.style.position = "absolute";
+    textAreaRef.current.style.top = writingCoords.y + "px";
+    textAreaRef.current.style.left = writingCoords.x + "px";
+    textAreaRef.current.focus();
+  }, [writingCoords]);
   function getCurrMouseCoords(e: any) {
     return {
       x: (e.clientX - panOffset.x * scale + scaleOffset.x) / scale,
@@ -151,35 +184,45 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
     };
   }
 
-  ws.onmessage = (event) => { 
+  ws.onmessage = (event) => {
     const mainCanvas = mainCanvasRef.current;
-    if(!mainCanvas)return; 
+    if (!mainCanvas) return;
     const mainCtx = mainCanvas.getContext("2d");
-    if(!mainCtx)return; 
+    if (!mainCtx) return;
     const message = JSON.parse(event.data.toString());
-    console.log("Recieved message: " + JSON.stringify(message))
-    console.log("transformed coords: ", { 
-      startX: (message.startX-panOffset.x*scale + scaleOffset.x)/scale, 
-      startY: (message.startY-panOffset.y*scale + scaleOffset.y)/scale
-      ,width: message.width, 
-      height:message.height
-    })
-    if(message.type === "geo") {
+    console.log("Recieved message: " + JSON.stringify(message));
+    console.log("transformed coords: ", {
+      startX: (message.startX - panOffset.x * scale + scaleOffset.x) / scale,
+      startY: (message.startY - panOffset.y * scale + scaleOffset.y) / scale,
+      width: message.width,
+      height: message.height,
+    });
+    if (message.type === "geo") {
       mainCtx.beginPath();
       mainCtx.strokeStyle = "red";
-      mainCtx.lineWidth = 2; 
-    
-      mainCtx.rect((message.startX*scale+panOffset.x*scale-scaleOffset.x),(message.startY*scale+panOffset.y*scale-scaleOffset.y), message.width*scale, message.height*scale);
-      
+      mainCtx.lineWidth = 2;
+
+      mainCtx.rect(
+        message.startX * scale + panOffset.x * scale - scaleOffset.x,
+        message.startY * scale + panOffset.y * scale - scaleOffset.y,
+        message.width * scale,
+        message.height * scale
+      );
+
       mainCtx.stroke();
       mainCtx.closePath();
-      setHist([...hist, {shape: message.shape, x: message.startX, y: message.startY, width: message.width, height: message.height}]);
-
+      setHist([
+        ...hist,
+        {
+          shape: message.shape,
+          x: message.startX,
+          y: message.startY,
+          width: message.width,
+          height: message.height,
+        },
+      ]);
     }
-    
-    
-
-  }
+  };
 
   function mouseDownHandler(e: any) {
     // e.preventDefault();
@@ -191,26 +234,41 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
     if (tool === "draw") {
       setIsDrawing(true);
       setDrawStartCoords(curr);
-    } else {
+    } else if (tool === "pointer") {
       setIsPanning(true);
       setPanStartCoords({
         x: e.clientX - panOffset.x,
         y: e.clientY - panOffset.y,
       });
+    } 
+  }
+
+  function doubleClickHandler(e: any) {
+    console.log("double click!!!");
+    const curr = getCurrMouseCoords(e);
+
+    if (tool === "text") {
+      setIsWriting(true);
+      // setWritingCoords(curr); 
+      setWritingCoords({
+        x: e.clientX,
+        y: e.clientY,
+      });
+
+      // textAreaRef.current?.focus();
     }
   }
 
   function mouseMoveHandler(e: any) {
-    
     const curr = getCurrMouseCoords(e);
     if (isDrawing) {
       let width = curr.x - drawStartCoords.x;
       let height = curr.y - drawStartCoords.y;
 
-      if (width && height) {
-        //provide the animation on the overlay canvas.
-        setDimensions({ width, height });
-      }
+      // if (width && height) {
+      //provide the animation on the overlay canvas.
+      setDimensions({ width, height });
+      // }
     } else if (isPanning) {
       setPanOffset({
         x: e.clientX - panStartCoords.x,
@@ -227,7 +285,7 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
     const mainCtx = mainCanvas.getContext("2d");
     const overlayCtx = overlayCanvas.getContext("2d");
     if (!mainCtx || !overlayCtx) return;
-    if (isDrawing) {
+    if (isDrawing && dimensions.width && dimensions.height) {
       console.log("drawing done!");
       setIsDrawing(false);
       overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
@@ -240,7 +298,7 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
         panOffset.y * scale - scaleOffset.y
       );
       mainCtx.scale(scale, scale);
-      
+
       mainCtx.beginPath();
       mainCtx.rect(
         drawStartCoords.x,
@@ -251,29 +309,31 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
       mainCtx.stroke();
       mainCtx.closePath(); //end the path.
       mainCtx.restore();
-      
-      console.log("sending: ", { 
-        startX: (drawStartCoords.x),
-          startY: (drawStartCoords.y),
-          width: dimensions.width,
-          height: dimensions.height,
-      })
-      ws.send(JSON.stringify({ 
-        type: "chat",
-        payload: {
-          shape: "rectangle",
-          startX: drawStartCoords.x,
-          startY: drawStartCoords.y,
-          width: dimensions.width,
-          height: dimensions.height,
-          roomId: roomId
-        },
-      })); 
+
+      console.log("sending: ", {
+        startX: drawStartCoords.x,
+        startY: drawStartCoords.y,
+        width: dimensions.width,
+        height: dimensions.height,
+      });
+      ws.send(
+        JSON.stringify({
+          type: "chat",
+          payload: {
+            shape: "rectangle",
+            startX: drawStartCoords.x,
+            startY: drawStartCoords.y,
+            width: dimensions.width,
+            height: dimensions.height,
+            roomId: roomId,
+          },
+        })
+      );
       setHist((prev) => {
         return [
           ...prev,
           {
-            shape:'rectangle', 
+            shape: "rectangle",
             x: drawStartCoords.x,
             y: drawStartCoords.y,
             width: dimensions.width,
@@ -281,8 +341,7 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
           },
         ]; //store the shape in the history array.
       });
-    } else {
-      console.log("zoomed or panned!");
+    } else if(isPanning) {
       setIsPanning(false);
       overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); //clear the overlay canvas.
       mainCtx.save();
@@ -294,13 +353,53 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
       mainCtx.scale(scale, scale);
       mainCtx.strokeStyle = "red";
       mainCtx.lineWidth = 2;
+      mainCtx.fillStyle = "red";
+      mainCtx.font = "18px Arial"; // Change the font size and style as needed
       hist.forEach((el) => {
-        mainCtx.beginPath();
-        mainCtx.rect(el.x, el.y, el.width, el.height);
-        mainCtx.stroke();
-        mainCtx.closePath(); //end the path.
+        if (el.shape === "rectangle") {
+          mainCtx.beginPath();
+          mainCtx.rect(el.x, el.y, el.width, el.height);
+          mainCtx.stroke();
+          mainCtx.closePath();
+        } else if (el.shape === "text" && el.text) {
+          mainCtx.fillText(el.text, el.x, el.y);
+        } //end the path.
       });
+      
       mainCtx.restore();
+    }
+    else { 
+      if (textAreaRef.current && textAreaRef.current.value) {
+        // mainCtx.save();
+        // mainCtx.translate(
+        //   panOffset.x * scale - scaleOffset.x,
+        //   panOffset.y * scale - scaleOffset.y
+        // );
+        // mainCtx.scale(scale, scale);
+        mainCtx.font='18px Arial'; 
+        mainCtx.fillStyle='red'; 
+        mainCtx.fillText(
+          textAreaRef.current.value,
+          writingCoords.x,
+          writingCoords.y+20
+        );
+        // mainCtx.restore();
+        setHist((prev) => {
+          return [
+            ...prev,
+            {
+              shape: "text",
+              x: (writingCoords.x - panOffset.x*scale + scaleOffset.x)/scale,
+              y: (writingCoords.y - panOffset.y*scale + scaleOffset.y)/scale,
+              width: 0,
+              height: 0,
+              text: textAreaRef.current?.value,
+            },
+          ];
+        });
+      }
+      
+      setIsWriting(false);
     }
   }
 
@@ -308,7 +407,7 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
     // e.preventDefault();
     console.log("mouse wheel");
     const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
-    setScale((prev) => Math.min(Math.max(prev * zoomFactor, 0.5), 2));
+    setScale((prev) => Math.min(Math.max(prev * zoomFactor, 0.5), 20));
   }
 
   function changeToolHandler(e: any) {
@@ -319,6 +418,22 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
 
   return (
     <div className="w-screen h-screen">
+      {isWriting && (
+        <textarea
+          ref={textAreaRef}
+          className={`bg-transparent 
+                      border-none 
+                      outline-none 
+                      focus:outline-none 
+                      focus:ring-0 
+                      text-red-600
+                      caret-red-500 
+                      text-[18px]
+                      font-[Arial]
+                      resize-none
+                      `}
+        />
+      )}
       <nav className="flex justify-center items-center gap-4 px-4 py-2 rounded-lg z-20 bg-white text-black  absolute top-5 left-[50%] translate-x-[-50%]">
         <label
           htmlFor="draw"
@@ -347,8 +462,23 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
           id="pointer"
           name="tool"
         />
+
+        <label
+          htmlFor="text"
+          className={`border rounded-md px-4 py-2 ${tool === "text" ? "bg-gray-500" : "bg-white"}`}
+        >
+          Text
+        </label>
+        <input
+          onChange={changeToolHandler}
+          className="sr-only"
+          type="radio"
+          id="text"
+          name="tool"
+        />
       </nav>
       <canvas
+        onDoubleClick={doubleClickHandler}
         id="overlay"
         ref={overlayCanvasRef}
         className="z-10 bg-transparent absolute top-0 left-0"
