@@ -390,8 +390,8 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
             ...prev,
             {
               shape: "text",
-              x: (writingCoords.x - panOffset.x*scale + scaleOffset.x)/scale,
-              y: (writingCoords.y - panOffset.y*scale + scaleOffset.y)/scale,
+              x: (writingCoords.x - panOffset.x+ scaleOffset.x)/scale,
+              y: (writingCoords.y - panOffset.y + scaleOffset.y)/scale,
               width: 0,
               height: 0,
               text: textAreaRef.current?.value,
