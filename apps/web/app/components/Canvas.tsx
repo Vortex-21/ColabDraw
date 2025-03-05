@@ -144,11 +144,11 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
       } else if (el.shape === "text" && el.text) {
         overlayCtx.font = "18px Arial";
         overlayCtx.fillStyle = "red";
-        overlayCtx.fillText(el.text, el.x, el.y);
+        overlayCtx.fillText(el.text, el.x, el.y+20);
         if (!isDrawing) {
           mainCtx.font = "18px Arial";
           mainCtx.fillStyle = "red";
-          mainCtx.fillText(el.text, el.x, el.y);
+          mainCtx.fillText(el.text, el.x, el.y+20);
         }
       }
     });
@@ -362,13 +362,13 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
           mainCtx.stroke();
           mainCtx.closePath();
         } else if (el.shape === "text" && el.text) {
-          mainCtx.fillText(el.text, el.x, el.y);
+          mainCtx.fillText(el.text, el.x, el.y+20);
         } //end the path.
       });
       
       mainCtx.restore();
     }
-    else { 
+    else { // is writing
       if (textAreaRef.current && textAreaRef.current.value) {
         // mainCtx.save();
         // mainCtx.translate(
