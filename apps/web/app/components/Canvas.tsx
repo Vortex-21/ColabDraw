@@ -17,6 +17,7 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
     height: number;
   } | null>(null);
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
+  const [font, setFont] = useState<number>(18);
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawStartCoords, setDrawStartCoords] = useState({ x: 0, y: 0 });
   const [tool, setTool] = useState("draw");
@@ -110,13 +111,13 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
       mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
 
     overlayCtx.translate(
-      panOffset.x * scale - (scaledWidth - mainCanvas.width) / 2,
-      panOffset.y * scale - (scaledHeight - mainCanvas.height) / 2
+      panOffset.x  - (scaledWidth - mainCanvas.width) / 2,
+      panOffset.y  - (scaledHeight - mainCanvas.height) / 2
     );
     if (!isDrawing)
       mainCtx.translate(
-        panOffset.x * scale - (scaledWidth - mainCanvas.width) / 2,
-        panOffset.y * scale - (scaledHeight - mainCanvas.height) / 2
+        panOffset.x - (scaledWidth - mainCanvas.width) / 2,
+        panOffset.y - (scaledHeight - mainCanvas.height) / 2
       );
 
     overlayCtx.scale(scale, scale);
@@ -142,11 +143,11 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
           mainCtx.closePath();
         }
       } else if (el.shape === "text" && el.text) {
-        overlayCtx.font = "18px Arial";
+        overlayCtx.font = `${font}px Arial`;
         overlayCtx.fillStyle = "red";
         overlayCtx.fillText(el.text, el.x, el.y+20);
         if (!isDrawing) {
-          mainCtx.font = "18px Arial";
+          mainCtx.font = `${font}px Arial`;
           mainCtx.fillStyle = "red";
           mainCtx.fillText(el.text, el.x, el.y+20);
         }
@@ -179,8 +180,8 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
   }, [writingCoords]);
   function getCurrMouseCoords(e: any) {
     return {
-      x: (e.clientX - panOffset.x * scale + scaleOffset.x) / scale,
-      y: (e.clientY - panOffset.y * scale + scaleOffset.y) / scale,
+      x: (e.clientX - panOffset.x + scaleOffset.x) / scale,
+      y: (e.clientY - panOffset.y + scaleOffset.y) / scale,
     };
   }
 
@@ -294,8 +295,8 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
       mainCtx.save();
       // mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height); //clear the main canvas.
       mainCtx.translate(
-        panOffset.x * scale - scaleOffset.x,
-        panOffset.y * scale - scaleOffset.y
+        panOffset.x  - scaleOffset.x,
+        panOffset.y  - scaleOffset.y
       );
       mainCtx.scale(scale, scale);
 
@@ -347,14 +348,14 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
       mainCtx.save();
       mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
       mainCtx.translate(
-        panOffset.x * scale - scaleOffset.x,
-        panOffset.y * scale - scaleOffset.y
+        panOffset.x  - scaleOffset.x,
+        panOffset.y  - scaleOffset.y
       );
       mainCtx.scale(scale, scale);
       mainCtx.strokeStyle = "red";
       mainCtx.lineWidth = 2;
       mainCtx.fillStyle = "red";
-      mainCtx.font = "18px Arial"; // Change the font size and style as needed
+      mainCtx.font = `${font}px Arial`; // Change the font size and style as needed
       hist.forEach((el) => {
         if (el.shape === "rectangle") {
           mainCtx.beginPath();
@@ -376,7 +377,7 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
         //   panOffset.y * scale - scaleOffset.y
         // );
         // mainCtx.scale(scale, scale);
-        mainCtx.font='18px Arial'; 
+        mainCtx.font=`${font}px Arial`; 
         mainCtx.fillStyle='red'; 
         mainCtx.fillText(
           textAreaRef.current.value,
