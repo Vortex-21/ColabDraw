@@ -111,13 +111,13 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
       mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
 
     overlayCtx.translate(
-      panOffset.x  - (scaledWidth - mainCanvas.width) / 2,
-      panOffset.y  - (scaledHeight - mainCanvas.height) / 2
+      panOffset.x*scale  - (scaledWidth - mainCanvas.width) / 2,
+      panOffset.y*scale  - (scaledHeight - mainCanvas.height) / 2
     );
     if (!isDrawing)
       mainCtx.translate(
-        panOffset.x - (scaledWidth - mainCanvas.width) / 2,
-        panOffset.y - (scaledHeight - mainCanvas.height) / 2
+        panOffset.x*scale - (scaledWidth - mainCanvas.width) / 2,
+        panOffset.y*scale - (scaledHeight - mainCanvas.height) / 2
       );
 
     overlayCtx.scale(scale, scale);
@@ -295,8 +295,8 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
       mainCtx.save();
       // mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height); //clear the main canvas.
       mainCtx.translate(
-        panOffset.x  - scaleOffset.x,
-        panOffset.y  - scaleOffset.y
+        panOffset.x*scale  - scaleOffset.x,
+        panOffset.y*scale  - scaleOffset.y
       );
       mainCtx.scale(scale, scale);
 
@@ -348,13 +348,13 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
       mainCtx.save();
       mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
       mainCtx.translate(
-        panOffset.x  - scaleOffset.x,
-        panOffset.y  - scaleOffset.y
+        panOffset.x*scale  - scaleOffset.x,
+        panOffset.y*scale  - scaleOffset.y
       );
       mainCtx.scale(scale, scale);
       mainCtx.strokeStyle = "red";
       mainCtx.lineWidth = 2;
-      mainCtx.fillStyle = "red";
+      mainCtx.fillStyle = "green";
       mainCtx.font = `${font}px Arial`; // Change the font size and style as needed
       hist.forEach((el) => {
         if (el.shape === "rectangle") {
@@ -377,12 +377,12 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
         //   panOffset.y * scale - scaleOffset.y
         // );
         // mainCtx.scale(scale, scale);
-        mainCtx.font=`${font}px Arial`; 
+        mainCtx.font=`${font*scale}px Arial`; 
         mainCtx.fillStyle='red'; 
         mainCtx.fillText(
           textAreaRef.current.value,
           writingCoords.x,
-          writingCoords.y+20
+          writingCoords.y+20*scale
         );
         // mainCtx.restore();
         setHist((prev) => {
@@ -390,8 +390,8 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
             ...prev,
             {
               shape: "text",
-              x: (writingCoords.x - panOffset.x+ scaleOffset.x)/scale,
-              y: (writingCoords.y - panOffset.y + scaleOffset.y)/scale,
+              x: (writingCoords.x - panOffset.x*scale+ scaleOffset.x)/scale,
+              y: (writingCoords.y - panOffset.y*scale + scaleOffset.y)/scale,
               width: 0,
               height: 0,
               text: textAreaRef.current?.value,
@@ -421,6 +421,7 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
     <div className="w-screen h-screen">
       {isWriting && (
         <textarea
+        style={{fontSize:`${font*scale}px`}}
           ref={textAreaRef}
           className={`bg-transparent 
                       border-none 
@@ -429,7 +430,6 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
                       focus:ring-0 
                       text-red-600
                       caret-red-500 
-                      text-[18px]
                       font-[Arial]
                       resize-none
                       `}
