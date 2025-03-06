@@ -46,11 +46,12 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
       let historyData: Array<shapeMetaData> = [];
       geometryHistory.forEach(
         (el: {
-          startX: number;
-          startY: number;
-          width: number;
-          height: number;
-          shape: string;
+          startX: number
+          startY: number
+          width: number
+          height: number
+          shape: string
+          text:string
         }) => {
           if (el.shape === "rectangle") {
             historyData.push({
@@ -68,6 +69,22 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
               mainCtx.rect(el.startX, el.startY, el.width, el.height);
               mainCtx.stroke();
               mainCtx.closePath();
+            }
+          }
+          else if(el.shape === 'text'){ 
+            historyData.push({
+              shape: el.shape,
+              x: el.startX,
+              y: el.startY,
+              width:0, 
+              height:0, 
+              text: el.text,
+            })
+
+            if (mainCtx) {
+              mainCtx.fillStyle = "red";
+              mainCtx.font = `${font}px Arial`;
+              mainCtx.fillText(el.text, el.startX, el.startY+20); 
             }
           }
         }
@@ -192,13 +209,7 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
     const mainCtx = mainCanvas.getContext("2d");
     if (!mainCtx) return;
     const message = JSON.parse(event.data.toString());
-    // console.log("Recieved message: " + JSON.stringify(message));
-    // console.log("transformed coords: ", {
-    //   startX: (message.startX - panOffset.x * scale + scaleOffset.x) / scale,
-    //   startY: (message.startY - panOffset.y * scale + scaleOffset.y) / scale,
-    //   width: message.width,
-    //   height: message.height,
-    // });
+    
     if (message.type === "geo") {
       if(message.shape==="rectangle")
       {mainCtx.beginPath();
