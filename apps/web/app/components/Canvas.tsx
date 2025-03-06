@@ -180,8 +180,8 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
   }, [writingCoords]);
   function getCurrMouseCoords(e: any) {
     return {
-      x: (e.clientX - panOffset.x + scaleOffset.x) / scale,
-      y: (e.clientY - panOffset.y + scaleOffset.y) / scale,
+      x: (e.clientX - panOffset.x*scale + scaleOffset.x) / scale,
+      y: (e.clientY - panOffset.y*scale + scaleOffset.y) / scale,
     };
   }
 
@@ -354,7 +354,7 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
       mainCtx.scale(scale, scale);
       mainCtx.strokeStyle = "red";
       mainCtx.lineWidth = 2;
-      mainCtx.fillStyle = "green";
+      mainCtx.fillStyle = "red";
       mainCtx.font = `${font}px Arial`; // Change the font size and style as needed
       hist.forEach((el) => {
         if (el.shape === "rectangle") {
