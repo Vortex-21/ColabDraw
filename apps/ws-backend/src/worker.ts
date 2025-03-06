@@ -18,6 +18,7 @@ const chatInsertionWorker = new Worker(
           width: job.data.width,
           height: job.data.height,
           shape: job.data.shape,
+          text: job.data.text,
         },
       });
       console.log("Shape stored successfully!");

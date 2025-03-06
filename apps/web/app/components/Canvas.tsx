@@ -178,6 +178,7 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
     textAreaRef.current.style.left = writingCoords.x + "px";
     textAreaRef.current.focus();
   }, [writingCoords]);
+
   function getCurrMouseCoords(e: any) {
     return {
       x: (e.clientX - panOffset.x*scale + scaleOffset.x) / scale,
@@ -191,15 +192,16 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
     const mainCtx = mainCanvas.getContext("2d");
     if (!mainCtx) return;
     const message = JSON.parse(event.data.toString());
-    console.log("Recieved message: " + JSON.stringify(message));
-    console.log("transformed coords: ", {
-      startX: (message.startX - panOffset.x * scale + scaleOffset.x) / scale,
-      startY: (message.startY - panOffset.y * scale + scaleOffset.y) / scale,
-      width: message.width,
-      height: message.height,
-    });
+    // console.log("Recieved message: " + JSON.stringify(message));
+    // console.log("transformed coords: ", {
+    //   startX: (message.startX - panOffset.x * scale + scaleOffset.x) / scale,
+    //   startY: (message.startY - panOffset.y * scale + scaleOffset.y) / scale,
+    //   width: message.width,
+    //   height: message.height,
+    // });
     if (message.type === "geo") {
-      mainCtx.beginPath();
+      if(message.shape==="rectangle")
+      {mainCtx.beginPath();
       mainCtx.strokeStyle = "red";
       mainCtx.lineWidth = 2;
 
@@ -222,6 +224,24 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
           height: message.height,
         },
       ]);
+    }
+    else if(message.shape === 'text'){ 
+      mainCtx.fillStyle='red'; 
+      mainCtx.font = `${font*scale}px Arial`;
+      mainCtx.fillText(message.text,message.startX*scale + panOffset.x*scale - scaleOffset.x, message.startY*scale + panOffset.y*scale - scaleOffset.y + 20*scale);
+
+      setHist([
+        ...hist,
+        {
+          shape: message.shape,
+          x: message.startX,
+          y: message.startY,
+          width: 0,
+          height: 0,
+          text:message.text
+        },
+      ]);
+    }
     }
   };
 
@@ -398,6 +418,20 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
             },
           ];
         });
+        ws.send(
+          JSON.stringify({
+            type: "chat",
+            payload: {
+              shape: "text",
+              startX: (writingCoords.x - panOffset.x*scale + scaleOffset.x)/scale,
+              startY: (writingCoords.y - panOffset.y*scale + scaleOffset.y)/scale,
+              width: 0,
+              height: 0,
+              text:textAreaRef.current.value,
+              roomId: roomId,
+            },
+          })
+        );
       }
       
       setIsWriting(false);

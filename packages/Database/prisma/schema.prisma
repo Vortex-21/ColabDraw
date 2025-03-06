@@ -16,6 +16,7 @@ datasource db {
 enum shapes {
   rectangle
   ellipse
+  text
 }
 
 model User {
@@ -54,6 +55,7 @@ model Geometry {
   roomId    Int
   userId    String
   shape     shapes
+  text      String?
   startX    Float
   startY    Float
   width     Float
