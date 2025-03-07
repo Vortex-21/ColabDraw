@@ -1,5 +1,8 @@
+'use client'
 import axios from "axios";
+import SquareIcon  from "../icons/SquareIcon";
 import React, { useEffect, useRef, useState } from "react";
+import { Hand, PointerIcon, TextCursor } from "lucide-react";
 interface shapeMetaData {
   shape: string;
   x: number;
@@ -302,6 +305,8 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
       setDimensions({ width, height });
       // }
     } else if (isPanning) {
+      if(mainCanvasRef.current)
+      // mainCanvasRef.current.style.cursor='move'
       setPanOffset({
         x: e.clientX - panStartCoords.x,
         y: e.clientY - panStartCoords.y,
@@ -483,9 +488,9 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
       <nav className="flex justify-center items-center gap-4 px-4 py-2 rounded-lg z-20 bg-white text-black  absolute top-5 left-[50%] translate-x-[-50%]">
         <label
           htmlFor="draw"
-          className={`border rounded-md px-4 py-2 ${tool === "draw" ? "bg-gray-500" : "bg-white"}`}
+          className={`rounded-md px-4 py-2 ${tool === "draw" ? "bg-gray-500" : "bg-white hover:bg-gray-300"}`}
         >
-          Draw
+          <SquareIcon/>
         </label>
         <input
           onChange={changeToolHandler}
@@ -497,9 +502,9 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
 
         <label
           htmlFor="pointer"
-          className={`border rounded-md px-4 py-2 ${tool === "pointer" ? "bg-gray-500" : "bg-white"}`}
+          className={`border-none rounded-md px-4 py-2 ${tool === "pointer" ? "bg-gray-500" : "bg-white hover:bg-gray-300"}`}
         >
-          Pointer
+            <Hand size={18} strokeWidth={1} />
         </label>
         <input
           onChange={changeToolHandler}
@@ -511,9 +516,9 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
 
         <label
           htmlFor="text"
-          className={`border rounded-md px-4 py-2 ${tool === "text" ? "bg-gray-500" : "bg-white"}`}
+          className={`border rounded-md px-4 py-2 ${tool === "text" ? "bg-gray-500" : "bg-white hover:bg-gray-300"}`}
         >
-          Text
+          <TextCursor size={16}/>
         </label>
         <input
           onChange={changeToolHandler}
@@ -527,7 +532,7 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
         onDoubleClick={doubleClickHandler}
         id="overlay"
         ref={overlayCanvasRef}
-        className="z-10 bg-transparent absolute top-0 left-0"
+        className={`z-10 bg-transparent absolute top-0 left-0 ${tool === 'draw'?'cursor-crosshair':tool === 'text'?'cursor-text':tool === 'pointer'?'cursor-grab':''} ${isPanning?'cursor-grabbing':tool === 'pointer'?'cursor-grab':'cursor-auto'}` }
         onMouseDown={mouseDownHandler}
         onMouseMove={mouseMoveHandler}
         onMouseUp={mouseUpHandler}
