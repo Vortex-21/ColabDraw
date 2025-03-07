@@ -502,7 +502,7 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
 
         <label
           htmlFor="pointer"
-          className={`border-none rounded-md px-4 py-2 ${tool === "pointer" ? "bg-gray-500" : "bg-white hover:bg-gray-300"}`}
+          className={`rounded-md px-4 py-2 ${tool === "pointer" ? "bg-gray-500" : "bg-white hover:bg-gray-300"}`}
         >
             <Hand size={18} strokeWidth={1} />
         </label>
@@ -516,7 +516,7 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
 
         <label
           htmlFor="text"
-          className={`border rounded-md px-4 py-2 ${tool === "text" ? "bg-gray-500" : "bg-white hover:bg-gray-300"}`}
+          className={`rounded-md px-4 py-2 ${tool === "text" ? "bg-gray-500" : "bg-white hover:bg-gray-300"}`}
         >
           <TextCursor size={16}/>
         </label>
