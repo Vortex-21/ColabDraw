@@ -1,9 +1,8 @@
 "use client";
 import axios from "axios";
-import SquareIcon from "../icons/SquareIcon";
 import React, { useEffect, useRef, useState } from "react";
-import { Hand, Square, TextCursor } from "lucide-react";
-import ToolBoxInput from "./ToolBoxInput";
+import { getStroke } from "perfect-freehand";
+import { getSvgPathFromStroke } from "../utils/pointsToSVG";
 import ToolBox from "./ToolBox";
 interface shapeMetaData {
   shape: string;
@@ -12,11 +11,11 @@ interface shapeMetaData {
   width: number;
   height: number;
   text?: string;
+  path?:Path2D
 }
 const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const mainCanvasRef = useRef<HTMLCanvasElement | null>(null);
-
   const [canvasSize, setCanvasSize] = useState<{
     width: number;
     height: number;
@@ -35,6 +34,9 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
   const [scaleOffset, setScaleOffset] = useState({ x: 0, y: 0 });
   const [isWriting, setIsWriting] = useState(false);
   const [writingCoords, setWritingCoords] = useState({ x: 0, y: 0 });
+  const [points, setPoints] = useState<Array<Array<number>>>([]);
+  const [freeHand, setFreeHand] = useState<boolean>(false);
+  const [path, setPath] = useState<Path2D | null>(null);
   useEffect(() => {
     const mainCanvas = mainCanvasRef.current;
     if (!mainCanvas) return;
@@ -89,7 +91,7 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
             });
 
             if (mainCtx) {
-              renderText(mainCtx, el.text, el.startX, el.startY+20, font); 
+              renderText(mainCtx, el.text, el.startX, el.startY + 20, font);
             }
           }
         }
@@ -154,16 +156,34 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
 
     hist.forEach((el: shapeMetaData) => {
       if (el.shape === "rectangle") {
-        drawShape(overlayCtx, el.shape, el.startX, el.startY, el.width, el.height);
+        drawShape(
+          overlayCtx,
+          el.shape,
+          el.startX,
+          el.startY,
+          el.width,
+          el.height
+        );
 
         if (!isDrawing) {
-          drawShape(mainCtx, el.shape, el.startX, el.startY, el.width, el.height);
+          drawShape(
+            mainCtx,
+            el.shape,
+            el.startX,
+            el.startY,
+            el.width,
+            el.height
+          );
         }
       } else if (el.shape === "text" && el.text) {
-          renderText(overlayCtx, el.text, el.startX, el.startY+20, font); 
+        renderText(overlayCtx, el.text, el.startX, el.startY + 20, font);
         if (!isDrawing) {
-          renderText(mainCtx, el.text, el.startX, el.startY+20, font);
+          renderText(mainCtx, el.text, el.startX, el.startY + 20, font);
         }
+      }
+      else if(el.shape === "painting" && el.path){ 
+        mainCtx.fillStyle='green'; 
+        mainCtx.fill(el.path); 
       }
     });
     if (isDrawing) {
@@ -196,7 +216,13 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
     };
   }
 
-  function renderText(ctx: CanvasRenderingContext2D, text:string, startX:number, startY:number, font:number){ 
+  function renderText(
+    ctx: CanvasRenderingContext2D,
+    text: string,
+    startX: number,
+    startY: number,
+    font: number
+  ) {
     ctx.fillStyle = "red";
     ctx.font = `${font}px Arial`;
     ctx.fillText(text, startX, startY);
@@ -229,26 +255,45 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
       if (message.shape === "rectangle") {
         mainCtx.strokeStyle = "red";
         mainCtx.lineWidth = 2;
-        
-        drawShape(mainCtx, message.shape, message.startX * scale + panOffset.x * scale - scaleOffset.x, message.startY * scale + panOffset.y * scale - scaleOffset.y, message.width * scale, message.height * scale);
+
+        drawShape(
+          mainCtx,
+          message.shape,
+          message.startX * scale + panOffset.x * scale - scaleOffset.x,
+          message.startY * scale + panOffset.y * scale - scaleOffset.y,
+          message.width * scale,
+          message.height * scale
+        );
         updateHistory(message);
       } else if (message.shape === "text") {
-        
-        renderText(mainCtx, message.text, message.startX*scale + panOffset.x*scale - scaleOffset.x, message.startY*scale + panOffset.y*scale - scaleOffset.y + 20*scale, font*scale); 
-        updateHistory(message); 
+        renderText(
+          mainCtx,
+          message.text,
+          message.startX * scale + panOffset.x * scale - scaleOffset.x,
+          message.startY * scale +
+            panOffset.y * scale -
+            scaleOffset.y +
+            20 * scale,
+          font * scale
+        );
+        updateHistory(message);
       }
     }
   };
 
-  function updateHistory(newContent:any){ 
-    setHist((prev) => [...prev, {
-      shape: newContent.shape,
-      startX: newContent.startX,
-      startY: newContent.startY,
-      width: newContent.shape === 'text'?0:newContent.width,
-      height: newContent.shape === 'text'?0:newContent.height,
-      text: newContent.shape === 'text'?newContent.text:null,
-    }])
+  function updateHistory(newContent: any) {
+    setHist((prev) => [
+      ...prev,
+      {
+        shape: newContent.shape,
+        startX: newContent.startX,
+        startY: newContent.startY,
+        width: newContent.shape === "text" ? 0 : newContent.width,
+        height: newContent.shape === "text" ? 0 : newContent.height,
+        text: newContent.shape === "text" ? newContent.text : null,
+        path:newContent.shape==="painting" ? newContent.path:null
+      },
+    ]);
   }
 
   function mouseDownHandler(e: any) {
@@ -266,6 +311,9 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
         x: e.clientX - panOffset.x,
         y: e.clientY - panOffset.y,
       });
+    } else if (tool === "pencil") {
+      setFreeHand(true);
+      setPoints([[e.clientX, e.clientY, e.pressure]]);
     }
   }
 
@@ -295,6 +343,29 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
           x: e.clientX - panStartCoords.x,
           y: e.clientY - panStartCoords.y,
         });
+    } else if (freeHand) {
+      const overlayCanvas = overlayCanvasRef.current;
+      if (!overlayCanvas) return;
+      const overlayCtx = overlayCanvas.getContext("2d");
+      if (!overlayCtx) return;
+
+      const currPoint = [e.clientX, e.clientY];
+      console.log("currPoint: " + currPoint)
+      setPoints((prev) => [...prev, currPoint]); // Add the new point to the points array.
+
+      const stroke = getStroke(points, {
+        size: 10,
+        thinning: 0.6,
+        smoothing: 0.5,
+        streamline: 0.5,
+      });
+      const pathData = getSvgPathFromStroke(stroke);
+      const currPath = new Path2D(pathData);
+      overlayCtx.beginPath(); 
+      overlayCtx.fillStyle = "red";
+      overlayCtx.fill(currPath);
+      overlayCtx.closePath(); 
+      setPath(currPath);
     }
   }
 
@@ -347,7 +418,7 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
           },
         })
       );
-      
+
       updateHistory({
         shape: "rectangle",
         startX: drawStartCoords.x,
@@ -368,28 +439,46 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
       mainCtx.strokeStyle = "red";
       hist.forEach((el) => {
         if (el.shape === "rectangle") {
-          drawShape(mainCtx, el.shape, el.startX, el.startY, el.width, el.height);
+          drawShape(
+            mainCtx,
+            el.shape,
+            el.startX,
+            el.startY,
+            el.width,
+            el.height
+          );
         } else if (el.shape === "text" && el.text) {
-          renderText(mainCtx, el.text, el.startX, el.startY+20, font); 
-        } 
+          renderText(mainCtx, el.text, el.startX, el.startY + 20, font);
+        }
+        else if(el.shape === "painting" && el.path){ 
+          mainCtx.beginPath();
+          mainCtx.strokeStyle = "red";
+          mainCtx.fill(el.path);
+          mainCtx.closePath();
+        }
       });
 
       mainCtx.restore();
-    } else {
+    } else if (isWriting) {
       // is writing
       if (textAreaRef.current && textAreaRef.current.value) {
-        
-        renderText(mainCtx, textAreaRef.current.value, writingCoords.x, writingCoords.y+20*scale, font*scale); 
+        renderText(
+          mainCtx,
+          textAreaRef.current.value,
+          writingCoords.x,
+          writingCoords.y + 20 * scale,
+          font * scale
+        );
         updateHistory({
-                shape: "text",
-                startX:
-                  (writingCoords.x - panOffset.x * scale + scaleOffset.x) / scale,
-                startY:
-                  (writingCoords.y - panOffset.y * scale + scaleOffset.y) / scale,
-                width: 0,
-                height: 0,
-                text: textAreaRef.current?.value,
-              })
+          shape: "text",
+          startX:
+            (writingCoords.x - panOffset.x * scale + scaleOffset.x) / scale,
+          startY:
+            (writingCoords.y - panOffset.y * scale + scaleOffset.y) / scale,
+          width: 0,
+          height: 0,
+          text: textAreaRef.current?.value,
+        });
         ws.send(
           JSON.stringify({
             type: "chat",
@@ -409,6 +498,46 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
       }
 
       setIsWriting(false);
+    } else if (freeHand) {
+      setFreeHand(false);
+      if (points && path) {
+
+        overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+        mainCtx.fillStyle = "blue";
+        let transformedPoints: number[][] = []; 
+        for(let i = 0; i < points.length; i++) {
+          const point = points[i];
+          if (!point) {console.log("No point found!!!");continue;} // Skip undefined entries
+          console.log("point: "+point); 
+          let x = point[0];
+          let y = point[1];
+          // let pressure = point[2];
+          // console.log(x,y,pressure); 
+          if(x && y){transformedPoints.push([(x-panOffset.x*scale+scaleOffset.x)/scale, (y-panOffset.y*scale+scaleOffset.y)/scale]);}
+          else{
+            console.log("NO point!!!")
+          }
+        }
+        const transformedStroke = getStroke(transformedPoints,{
+          size: 10,
+          thinning: 0.6,
+          smoothing: 0.5,
+          streamline: 0.5,
+        }); 
+
+        const transformedPath = new Path2D(getSvgPathFromStroke(transformedStroke));
+        mainCtx.beginPath(); 
+        mainCtx.fill(path);
+        mainCtx.closePath(); 
+        updateHistory({
+          shape:"painting", 
+          startX:0, 
+          startY:0,
+          width:0,
+          height:0,
+          path:transformedPath,
+        })
+      }
     }
   }
 
@@ -427,6 +556,7 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
 
   return (
     <div className="w-screen h-screen">
+      {/* <svg/> */}
       {isWriting && (
         <textarea
           style={{ fontSize: `${font * scale}px` }}
@@ -448,7 +578,7 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
         onDoubleClick={doubleClickHandler}
         id="overlay"
         ref={overlayCanvasRef}
-        className={`z-10 bg-transparent absolute top-0 left-0 ${tool === "draw" ? "cursor-crosshair" : tool === "text" ? "cursor-text" : tool === "pointer" ? "cursor-grab" : ""} ${isPanning ? "cursor-grabbing" : tool === "pointer" ? "cursor-grab" : "cursor-auto"}`}
+        className={`z-10 bg-transparent absolute top-0 left-0 ${tool === "draw" ? "cursor-crosshair" : tool === "text" ? "cursor-text" : tool === "pointer" ? "cursor-grab" : ""} ${isPanning ? "cursor-grabbing" : tool === "pointer" ? "cursor-grab" : "cursor-crosshair"}`}
         onMouseDown={mouseDownHandler}
         onMouseMove={mouseMoveHandler}
         onMouseUp={mouseUpHandler}

@@ -1,6 +1,6 @@
 import React from 'react'
 import ToolBoxInput from './ToolBoxInput'
-import { Hand, Square, TextCursor } from 'lucide-react'
+import { Hand, Pencil, Square, TextCursor } from 'lucide-react'
 
 const ToolBox = ({changeToolHandler, tool}:{changeToolHandler:(e:any)=>void, tool: string}) => {
   return (
@@ -25,6 +25,13 @@ const ToolBox = ({changeToolHandler, tool}:{changeToolHandler:(e:any)=>void, too
           tool={tool}
           Icon={<TextCursor size={18} strokeWidth={1} />}
         ></ToolBoxInput>
+
+        <ToolBoxInput
+          onChangeHandler={changeToolHandler}
+          id="pencil"
+          tool={tool}
+          Icon={<Pencil size={18} strokeWidth={1} />}
+        />
       </nav>
   )
 }
