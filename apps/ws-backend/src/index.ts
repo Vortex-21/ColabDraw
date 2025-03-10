@@ -26,7 +26,7 @@ function checkUser(token: string): string|null {
 let roomToSocket = new Map<number,Map<WebSocket,boolean>>(); 
 let dbInsertionQueue = new Queue('dbInsertionQueue'); 
 
-async function addMessageToDB(roomId:number, userId:string, startX:number, startY:number, width:number, height:number, shape:string, text:string){ 
+async function addMessageToDB(roomId:number, userId:string, startX:number, startY:number, width:number, height:number, shape:string, text:string, path:string){ 
     console.log("queue function reporting text: ", text); 
     try { 
         await dbInsertionQueue.add('dbInsertionQueue',{ 
@@ -37,6 +37,7 @@ async function addMessageToDB(roomId:number, userId:string, startX:number, start
                 height,
                 shape,
                 text,
+                path,
                 userId
             
         }, { 
@@ -126,6 +127,7 @@ wss.on('connection', (socket, request)   => {
                 // const message = parsedMessage.payload.message; 
                 const shape = parsedMessage.payload.shape; 
                 const text = parsedMessage.payload.text;
+                const path = parsedMessage.payload.path; 
                 const startX = parsedMessage.payload.startX; 
                 const startY =  parsedMessage.payload.startY; 
                 const width = parsedMessage.payload.width; 
@@ -150,12 +152,12 @@ wss.on('connection', (socket, request)   => {
                             startY, 
                             width, 
                             height,
-                            text
-                        
+                            text,
+                            path
                     }));
                 }
     
-                await addMessageToDB(roomId, userId, startX, startY, width, height, shape, text); 
+                await addMessageToDB(roomId, userId, startX, startY, width, height, shape, text, path); 
     
     
             }

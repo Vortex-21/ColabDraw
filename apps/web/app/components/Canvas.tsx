@@ -11,7 +11,7 @@ interface shapeMetaData {
   width: number;
   height: number;
   text?: string;
-  path?:Path2D
+  path?: number[][]
 }
 const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -182,8 +182,18 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
         }
       }
       else if(el.shape === "painting" && el.path){ 
-        mainCtx.fillStyle='green'; 
-        mainCtx.fill(el.path); 
+        overlayCtx.fillStyle='yellow'; 
+        const currPath = new Path2D(getSvgPathFromStroke(getStroke(el.path))); 
+        overlayCtx.beginPath(); 
+        overlayCtx.fill(currPath); 
+        overlayCtx.closePath(); 
+        if(!isDrawing){
+          mainCtx.fillStyle='green'; 
+        // console.log(JSON.parse(el.path)); 
+        const currPath = new Path2D(getSvgPathFromStroke(getStroke(el.path))); 
+        mainCtx.beginPath(); 
+        mainCtx.fill(currPath); 
+        mainCtx.closePath(); }
       }
     });
     if (isDrawing) {
@@ -277,6 +287,22 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
           font * scale
         );
         updateHistory(message);
+      } else if(message.shape === 'painting'){ 
+        mainCtx.fillStyle='white';
+        let receivedPoints = JSON.parse(message.path); 
+        let transformedPoints = receivedPoints.map((el:any) => {
+          return [(el[0]*scale + panOffset.x*scale - scaleOffset.x), (el[1]*scale + panOffset.y*scale - scaleOffset.y)]
+        })
+        console.log("Res : ",transformedPoints == receivedPoints);
+        console.log("received: ", receivedPoints);  
+        console.log("transformed: ", transformedPoints);  
+        const currPath = new Path2D(getSvgPathFromStroke(getStroke(transformedPoints))) 
+        mainCtx.beginPath(); 
+        mainCtx.fill(currPath); 
+        mainCtx.closePath(); 
+        // message.path=receivedPoints;
+        updateHistory({...message, path: receivedPoints}); 
+        // updateHistory({...message, path:receivedPoints});
       }
     }
   };
@@ -453,7 +479,8 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
         else if(el.shape === "painting" && el.path){ 
           mainCtx.beginPath();
           mainCtx.strokeStyle = "red";
-          mainCtx.fill(el.path);
+          const currPath = new Path2D(getSvgPathFromStroke(getStroke(el.path))); 
+          mainCtx.fill(currPath);
           mainCtx.closePath();
         }
       });
@@ -519,13 +546,14 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
           }
         }
         const transformedStroke = getStroke(transformedPoints,{
-          size: 10,
+          size: 10/scale,
           thinning: 0.6,
           smoothing: 0.5,
           streamline: 0.5,
         }); 
-
-        const transformedPath = new Path2D(getSvgPathFromStroke(transformedStroke));
+        const svgPathString = getSvgPathFromStroke(transformedStroke);
+        console.log("svgPathString : "+svgPathString); 
+        // const transformedPath = new Path2D(svgPathString);
         mainCtx.beginPath(); 
         mainCtx.fill(path);
         mainCtx.closePath(); 
@@ -535,8 +563,20 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
           startY:0,
           width:0,
           height:0,
-          path:transformedPath,
+          path:transformedPoints,
         })
+        ws.send(JSON.stringify({ 
+          type: "chat",
+          payload: {
+            shape: "painting",
+            startX: 0,
+            startY: 0,
+            width: 0,
+            height: 0,
+            path: JSON.stringify(transformedPoints),
+            roomId: roomId,
+          },
+        }))
       }
     }
   }
