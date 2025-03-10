@@ -59,6 +59,7 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
           height: number;
           shape: string;
           text: string;
+          path: string
         }) => {
           if (el.shape === "rectangle") {
             historyData.push({
@@ -92,6 +93,22 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
 
             if (mainCtx) {
               renderText(mainCtx, el.text, el.startX, el.startY + 20, font);
+            }
+          }else if(el.shape === "painting"){ 
+            historyData.push({
+              shape: el.shape,
+              startX: el.startX,
+              startY: el.startY,
+              width: el.width,
+              height: el.height,
+              path: JSON.parse(el.path)
+            });
+
+            if (mainCtx) {
+              mainCtx.fillStyle = "red";
+              // mainCtx.lineWidth = 2;
+              const currPath = new Path2D(getSvgPathFromStroke(getStroke(JSON.parse(el.path)))); 
+              mainCtx.fill(currPath); 
             }
           }
         }
