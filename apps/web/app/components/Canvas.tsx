@@ -11,7 +11,7 @@ interface shapeMetaData {
   width: number;
   height: number;
   text?: string;
-  path?: number[][]
+  path?: number[][];
 }
 const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -22,20 +22,30 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
   } | null>(null);
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
   const [font, setFont] = useState<number>(18);
-  const [isDrawing, setIsDrawing] = useState(false);
+  // const [isDrawing, setIsDrawing] = useState(false);
+  const [action, setAction] = useState<string|null>(null); 
+  const isDrawing = useRef<boolean>(false);
   const [drawStartCoords, setDrawStartCoords] = useState({ x: 0, y: 0 });
   const [tool, setTool] = useState("draw");
-  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  // const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  const dimensionsRef = useRef<{width:number, height:number}>({width:0, height:0}); 
   const [hist, setHist] = useState<Array<shapeMetaData>>([]);
-  const [isPanning, setIsPanning] = useState(false);
+  // const [isPanning, setIsPanning] = useState(false);
+  const isPanning = useRef<boolean>(false);  
+
   const [panStartCoords, setPanStartCoords] = useState({ x: 0, y: 0 });
-  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
-  const [scale, setScale] = useState(1);
-  const [scaleOffset, setScaleOffset] = useState({ x: 0, y: 0 });
-  const [isWriting, setIsWriting] = useState(false);
+  // const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  // const [scale, setScale] = useState(1);
+  const scaleRef = useRef<number>(1); 
+  const panOffsetRef = useRef<{x:number,y:number}>({x:0,y:0});  
+  // const [scaleOffset, setScaleOffset] = useState({ x: 0, y: 0 });
+  const scaleOffsetRef = useRef<{x:number,y:number}>({x:0, y:0}); 
+  // const [isWriting, setIsWriting] = useState(false);
+  const isWriting = useRef<boolean>(false); 
   const [writingCoords, setWritingCoords] = useState({ x: 0, y: 0 });
   const [points, setPoints] = useState<Array<Array<number>>>([]);
-  const [freeHand, setFreeHand] = useState<boolean>(false);
+  // const [freeHand, setFreeHand] = useState<boolean>(false);
+  const freeHand = useRef<boolean>(false); 
   const [path, setPath] = useState<Path2D | null>(null);
   useEffect(() => {
     const mainCanvas = mainCanvasRef.current;
@@ -59,7 +69,7 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
           height: number;
           shape: string;
           text: string;
-          path: string
+          path: string;
         }) => {
           if (el.shape === "rectangle") {
             historyData.push({
@@ -94,21 +104,23 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
             if (mainCtx) {
               renderText(mainCtx, el.text, el.startX, el.startY + 20, font);
             }
-          }else if(el.shape === "painting"){ 
+          } else if (el.shape === "painting") {
             historyData.push({
               shape: el.shape,
               startX: el.startX,
               startY: el.startY,
               width: el.width,
               height: el.height,
-              path: JSON.parse(el.path)
+              path: JSON.parse(el.path),
             });
 
             if (mainCtx) {
               mainCtx.fillStyle = "red";
               // mainCtx.lineWidth = 2;
-              const currPath = new Path2D(getSvgPathFromStroke(getStroke(JSON.parse(el.path)))); 
-              mainCtx.fill(currPath); 
+              const currPath = new Path2D(
+                getSvgPathFromStroke(getStroke(JSON.parse(el.path)))
+              );
+              mainCtx.fill(currPath);
             }
           }
         }
@@ -129,7 +141,7 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
     }
   }, [canvasSize]);
 
-  useEffect(() => {
+  function redrawCanvas(panOffset:{x:number, y:number}, scale:number, isDrawing:boolean){ 
     const mainCanvas = mainCanvasRef.current;
     const overlayCanvas = overlayCanvasRef.current;
     if (!overlayCanvas || !mainCanvas) return;
@@ -139,10 +151,14 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
 
     const scaledHeight = mainCanvas.height * scale;
     const scaledWidth = mainCanvas.width * scale;
-    setScaleOffset({
+    // setScaleOffset({
+    //   x: (scaledWidth - mainCanvas.width) / 2,
+    //   y: (scaledHeight - mainCanvas.height) / 2,
+    // });
+    scaleOffsetRef.current = { 
       x: (scaledWidth - mainCanvas.width) / 2,
       y: (scaledHeight - mainCanvas.height) / 2,
-    });
+    }
     overlayCtx.save();
     mainCtx.save();
 
@@ -170,63 +186,24 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
 
       mainCtx.lineWidth = 2;
     }
-
-    hist.forEach((el: shapeMetaData) => {
-      if (el.shape === "rectangle") {
-        drawShape(
-          overlayCtx,
-          el.shape,
-          el.startX,
-          el.startY,
-          el.width,
-          el.height
-        );
-
-        if (!isDrawing) {
-          drawShape(
-            mainCtx,
-            el.shape,
-            el.startX,
-            el.startY,
-            el.width,
-            el.height
-          );
-        }
-      } else if (el.shape === "text" && el.text) {
-        renderText(overlayCtx, el.text, el.startX, el.startY + 20, font);
-        if (!isDrawing) {
-          renderText(mainCtx, el.text, el.startX, el.startY + 20, font);
-        }
-      }
-      else if(el.shape === "painting" && el.path){ 
-        overlayCtx.fillStyle='yellow'; 
-        const currPath = new Path2D(getSvgPathFromStroke(getStroke(el.path))); 
-        overlayCtx.beginPath(); 
-        overlayCtx.fill(currPath); 
-        overlayCtx.closePath(); 
-        if(!isDrawing){
-          mainCtx.fillStyle='green'; 
-        // console.log(JSON.parse(el.path)); 
-        const currPath = new Path2D(getSvgPathFromStroke(getStroke(el.path))); 
-        mainCtx.beginPath(); 
-        mainCtx.fill(currPath); 
-        mainCtx.closePath(); }
-      }
-    });
+  renderHistoryElements(hist, mainCtx, overlayCtx, isDrawing); 
     if (isDrawing) {
       drawShape(
         overlayCtx,
         "rectangle",
         drawStartCoords.x,
         drawStartCoords.y,
-        dimensions.width,
-        dimensions.height
+        dimensionsRef.current.width,
+        dimensionsRef.current.height
       );
     }
 
     overlayCtx.restore();
     mainCtx.restore();
-  }, [dimensions, panOffset, scale]);
+  }
+  // useEffect(() => {
+  //   redrawCanvas(panOffsetRef.current,scaleRef.current); 
+  // }, [dimensions]);
 
   useEffect(() => {
     if (!textAreaRef.current) return;
@@ -237,10 +214,63 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
   }, [writingCoords]);
 
   function getCurrMouseCoords(e: any) {
+    const coords = inverseTransform(e.clientX, e.clientY, panOffsetRef.current, scaleOffsetRef.current, scaleRef.current); 
+    // return {
+    //   x: (e.clientX - panOffsetRef.current.x * scaleRef.current + scaleOffsetRef.current.x) / scaleRef.current,
+    //   y: (e.clientY - panOffsetRef.current.y * scaleRef.current + scaleOffsetRef.current.y) / scaleRef.current,
+    // };
     return {
-      x: (e.clientX - panOffset.x * scale + scaleOffset.x) / scale,
-      y: (e.clientY - panOffset.y * scale + scaleOffset.y) / scale,
-    };
+      x:coords.x, 
+      y:coords.y
+    }
+  }
+
+  function renderHistoryElements(historyArray:Array<shapeMetaData>, mainCtx:CanvasRenderingContext2D, overlayCtx:CanvasRenderingContext2D|null, isDrawing:boolean){ 
+    historyArray.forEach((el:shapeMetaData) => { 
+      if(el.shape === 'rectangle'){ 
+        if(overlayCtx){drawShape(
+          overlayCtx,
+          el.shape,
+          el.startX,
+          el.startY,
+          el.width,
+          el.height
+        );}
+
+        if(!isDrawing){ 
+          drawShape(
+            mainCtx,
+            el.shape,
+            el.startX,
+            el.startY,
+            el.width,
+            el.height
+          );
+        }
+      }
+      else if(el.shape === 'text' && el.text){ 
+        if(overlayCtx){renderText(overlayCtx, el.text, el.startX, el.startY + 20, font);}
+
+        if(!isDrawing){ 
+          renderText(mainCtx, el.text, el.startX, el.startY + 20, font);
+        }
+      }
+      else if(el.shape === 'painting' && el.path){ 
+        const currPath = new Path2D(getSvgPathFromStroke(getStroke(el.path))); 
+
+        if(overlayCtx){overlayCtx.beginPath();
+        overlayCtx.fill(currPath);
+        overlayCtx.closePath();}
+        if (!isDrawing) {
+          mainCtx.fillStyle = "red";
+          // console.log(JSON.parse(el.path));
+          const currPath = new Path2D(getSvgPathFromStroke(getStroke(el.path)));
+          mainCtx.beginPath();
+          mainCtx.fill(currPath);
+          mainCtx.closePath();
+        }
+      }
+    })
   }
 
   function renderText(
@@ -282,43 +312,56 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
       if (message.shape === "rectangle") {
         mainCtx.strokeStyle = "red";
         mainCtx.lineWidth = 2;
-
-        drawShape(
-          mainCtx,
-          message.shape,
-          message.startX * scale + panOffset.x * scale - scaleOffset.x,
-          message.startY * scale + panOffset.y * scale - scaleOffset.y,
-          message.width * scale,
-          message.height * scale
-        );
+        const newCoords = forwardTransform(message.startX, message.startY, panOffsetRef.current, scaleOffsetRef.current, scaleRef.current); 
+        // drawShape(
+        //   mainCtx,
+        //   message.shape,
+        //   message.startX * scaleRef.current + panOffsetRef.current.x * scaleRef.current - scaleOffset.x,
+        //   message.startY * scaleRef.current + panOffsetRef.current.y * scaleRef.current - scaleOffset.y,
+        //   message.width * scaleRef.current,
+        //   message.height * scaleRef.current
+        // );
+        drawShape(mainCtx, message.shape, newCoords.x, newCoords.y, message.width*scaleRef.current, message.height*scaleRef.current);
         updateHistory(message);
       } else if (message.shape === "text") {
-        renderText(
-          mainCtx,
-          message.text,
-          message.startX * scale + panOffset.x * scale - scaleOffset.x,
-          message.startY * scale +
-            panOffset.y * scale -
-            scaleOffset.y +
-            20 * scale,
-          font * scale
-        );
+        const newCoords = forwardTransform(message.startX, message.startY, panOffsetRef.current, scaleOffsetRef.current, scaleRef.current); 
+        // renderText(
+        //   mainCtx,
+        //   message.text,
+        //   message.startX * scaleRef.current + panOffsetRef.current.x * scaleRef.current - scaleOffset.x,
+        //   message.startY * scaleRef.current +
+        //     panOffsetRef.current.y * scaleRef.current -
+        //     scaleOffset.y +
+        //     20 * scaleRef.current,
+        //   font * scaleRef.current
+        // );
+        renderText(mainCtx, message.text, newCoords.x, newCoords.y+20*scaleRef.current, font*scaleRef.current); 
         updateHistory(message);
-      } else if(message.shape === 'painting'){ 
-        mainCtx.fillStyle='white';
-        let receivedPoints = JSON.parse(message.path); 
-        let transformedPoints = receivedPoints.map((el:any) => {
-          return [(el[0]*scale + panOffset.x*scale - scaleOffset.x), (el[1]*scale + panOffset.y*scale - scaleOffset.y)]
-        })
-        console.log("Res : ",transformedPoints == receivedPoints);
-        console.log("received: ", receivedPoints);  
-        console.log("transformed: ", transformedPoints);  
-        const currPath = new Path2D(getSvgPathFromStroke(getStroke(transformedPoints))) 
-        mainCtx.beginPath(); 
-        mainCtx.fill(currPath); 
-        mainCtx.closePath(); 
+      } else if (message.shape === "painting") {
+        mainCtx.fillStyle = "white";
+        let receivedPoints = JSON.parse(message.path);
+        let transformedPoints = receivedPoints.map((el: any) => {
+          const newPoint = forwardTransform(el[0],el[1], panOffsetRef.current, scaleOffsetRef.current, scaleRef.current); 
+          // return [
+          //   el[0] * scaleRef.current + panOffsetRef.current.x * scaleRef.current - scaleOffset.x,
+          //   el[1] * scaleRef.current + panOffsetRef.current.y * scaleRef.current - scaleOffset.y,
+          // ];
+          return [
+            newPoint.x, 
+            newPoint.y
+         ]
+        });
+        console.log("Res : ", transformedPoints == receivedPoints);
+        console.log("received: ", receivedPoints);
+        console.log("transformed: ", transformedPoints);
+        const currPath = new Path2D(
+          getSvgPathFromStroke(getStroke(transformedPoints))
+        );
+        mainCtx.beginPath();
+        mainCtx.fill(currPath);
+        mainCtx.closePath();
         // message.path=receivedPoints;
-        updateHistory({...message, path: receivedPoints}); 
+        updateHistory({ ...message, path: receivedPoints });
         // updateHistory({...message, path:receivedPoints});
       }
     }
@@ -334,7 +377,7 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
         width: newContent.shape === "text" ? 0 : newContent.width,
         height: newContent.shape === "text" ? 0 : newContent.height,
         text: newContent.shape === "text" ? newContent.text : null,
-        path:newContent.shape==="painting" ? newContent.path:null
+        path: newContent.shape === "painting" ? newContent.path : null,
       },
     ]);
   }
@@ -346,16 +389,32 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
     });
     const curr = getCurrMouseCoords(e);
     if (tool === "draw") {
-      setIsDrawing(true);
+      // setIsDrawing(true);
+      isDrawing.current = true; 
+      isPanning.current = false; 
+      isWriting.current = false; 
+      freeHand.current = false; 
       setDrawStartCoords(curr);
     } else if (tool === "pointer") {
-      setIsPanning(true);
+      // setIsPanning(true);
+      if(action !== "panning")setAction("panning"); 
+
+      isPanning.current = true; 
+      isDrawing.current = false; 
+      // isPanning.current = true; 
+      isWriting.current = false; 
+      freeHand.current = false; 
       setPanStartCoords({
-        x: e.clientX - panOffset.x,
-        y: e.clientY - panOffset.y,
+        x: e.clientX - panOffsetRef.current.x,
+        y: e.clientY - panOffsetRef.current.y,
       });
     } else if (tool === "pencil") {
-      setFreeHand(true);
+      // setFreeHand(true);
+      isDrawing.current = false; 
+      isPanning.current = false; 
+      isWriting.current = false; 
+      // freeHand.current = false; 
+      freeHand.current = true; 
       setPoints([[e.clientX, e.clientY, e.pressure]]);
     }
   }
@@ -364,7 +423,8 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
     console.log("double click!!!");
 
     if (tool === "text") {
-      setIsWriting(true);
+      // setIsWriting(true);
+      isWriting.current = true; 
 
       setWritingCoords({
         x: e.clientX,
@@ -375,25 +435,34 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
 
   function mouseMoveHandler(e: any) {
     const curr = getCurrMouseCoords(e);
-    if (isDrawing) {
+    // console.log(freeHand); 
+    if (isDrawing.current) {
       let width = curr.x - drawStartCoords.x;
       let height = curr.y - drawStartCoords.y;
 
-      setDimensions({ width, height });
-    } else if (isPanning) {
+      // setDimensions({ width, height });
+      // const prevDims = dimensionsRef.current; 
+      dimensionsRef.current = {width:width, height:height}; 
+      redrawCanvas(panOffsetRef.current, scaleRef.current, isDrawing.current); 
+    } else if (isPanning.current) {
       if (mainCanvasRef.current)
-        setPanOffset({
-          x: e.clientX - panStartCoords.x,
-          y: e.clientY - panStartCoords.y,
-        });
-    } else if (freeHand) {
+        // setPanOffset({
+        //   x: e.clientX - panStartCoords.x,
+        //   y: e.clientY - panStartCoords.y,
+        // });
+        panOffsetRef.current = { 
+          x: e.clientX - panStartCoords.x, 
+          y: e.clientY - panStartCoords.y
+        }
+        redrawCanvas(panOffsetRef.current, scaleRef.current, isDrawing.current); 
+    } else if (freeHand.current) {
       const overlayCanvas = overlayCanvasRef.current;
       if (!overlayCanvas) return;
       const overlayCtx = overlayCanvas.getContext("2d");
       if (!overlayCtx) return;
 
       const currPoint = [e.clientX, e.clientY];
-      console.log("currPoint: " + currPoint)
+      console.log("currPoint: " + currPoint);
       setPoints((prev) => [...prev, currPoint]); // Add the new point to the points array.
 
       const stroke = getStroke(points, {
@@ -404,16 +473,37 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
       });
       const pathData = getSvgPathFromStroke(stroke);
       const currPath = new Path2D(pathData);
-      overlayCtx.beginPath(); 
+      overlayCtx.beginPath();
       overlayCtx.fillStyle = "red";
       overlayCtx.fill(currPath);
-      overlayCtx.closePath(); 
+      overlayCtx.closePath();
       setPath(currPath);
     }
   }
 
+  function sendShapeUpdate(shape:string, startX:number=0,startY:number,width:number, height:number, text:string|null, path:string|null, roomId:number){ 
+    ws.send(JSON.stringify({ 
+      type: "chat",
+      payload:{ 
+        shape: shape, 
+        startX: startX, 
+        startY: startY, 
+        width: width, 
+        height: height,
+        text: text===null?null:text, 
+        path:path === null?null:path,
+        roomId: roomId
+      } 
+    }))
+    
+  }
+
+
+
+
   function mouseUpHandler(e: any) {
     // e.preventDefault();
+    console.log("MOUSE UP!@!")
     const mainCanvas = mainCanvasRef.current;
     const overlayCanvas = overlayCanvasRef.current;
 
@@ -423,177 +513,123 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
     const overlayCtx = overlayCanvas.getContext("2d");
 
     if (!mainCtx || !overlayCtx) return;
-
-    if (isDrawing && dimensions.width && dimensions.height) {
+    
+    if (isDrawing.current && dimensionsRef.current.width && dimensionsRef.current.height) {
       console.log("drawing done!");
-      setIsDrawing(false);
+      // setIsDrawing(false);
+      isDrawing.current = false; 
+      isWriting.current = false; 
+      isPanning.current = false; 
+      freeHand.current = false; 
       overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
       mainCtx.strokeStyle = "red";
       mainCtx.lineWidth = 2;
       mainCtx.save();
       // mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height); //clear the main canvas.
       mainCtx.translate(
-        panOffset.x * scale - scaleOffset.x,
-        panOffset.y * scale - scaleOffset.y
+        panOffsetRef.current.x * scaleRef.current - scaleOffsetRef.current.x,
+        panOffsetRef.current.y * scaleRef.current - scaleOffsetRef.current.y
       );
-      mainCtx.scale(scale, scale);
+      mainCtx.scale(scaleRef.current, scaleRef.current);
       drawShape(
         mainCtx,
         "rectangle",
         drawStartCoords.x,
         drawStartCoords.y,
-        dimensions.width,
-        dimensions.height
+        dimensionsRef.current.width,
+        dimensionsRef.current.height
       );
 
       mainCtx.restore();
 
-      ws.send(
-        JSON.stringify({
-          type: "chat",
-          payload: {
-            shape: "rectangle",
-            startX: drawStartCoords.x,
-            startY: drawStartCoords.y,
-            width: dimensions.width,
-            height: dimensions.height,
-            roomId: roomId,
-          },
-        })
-      );
+      
+      sendShapeUpdate("rectangle", drawStartCoords.x, drawStartCoords.y, dimensionsRef.current.width, dimensionsRef.current.height, null, null, roomId); 
 
       updateHistory({
         shape: "rectangle",
         startX: drawStartCoords.x,
         startY: drawStartCoords.y,
-        width: dimensions.width,
-        height: dimensions.height,
+        width: dimensionsRef.current.width,
+        height: dimensionsRef.current.height,
       });
-    } else if (isPanning) {
-      setIsPanning(false);
+    } else if (isPanning.current) {
+      // setIsPanning(false);
+      if(action === 'panning')setAction(null); 
+      isPanning.current = false; 
+      isDrawing.current = false; 
+      isWriting.current = false; 
+      freeHand.current = false; 
       overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); //clear the overlay canvas.
       mainCtx.save();
       mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
       mainCtx.translate(
-        panOffset.x * scale - scaleOffset.x,
-        panOffset.y * scale - scaleOffset.y
+        panOffsetRef.current.x * scaleRef.current - scaleOffsetRef.current.x,
+        panOffsetRef.current.y * scaleRef.current - scaleOffsetRef.current.y
       );
-      mainCtx.scale(scale, scale);
+      mainCtx.scale(scaleRef.current, scaleRef.current);
       mainCtx.strokeStyle = "red";
-      hist.forEach((el) => {
-        if (el.shape === "rectangle") {
-          drawShape(
-            mainCtx,
-            el.shape,
-            el.startX,
-            el.startY,
-            el.width,
-            el.height
-          );
-        } else if (el.shape === "text" && el.text) {
-          renderText(mainCtx, el.text, el.startX, el.startY + 20, font);
-        }
-        else if(el.shape === "painting" && el.path){ 
-          mainCtx.beginPath();
-          mainCtx.strokeStyle = "red";
-          const currPath = new Path2D(getSvgPathFromStroke(getStroke(el.path))); 
-          mainCtx.fill(currPath);
-          mainCtx.closePath();
-        }
-      });
+
+      renderHistoryElements(hist, mainCtx, null, isDrawing.current); 
 
       mainCtx.restore();
-    } else if (isWriting) {
+    } else if (isWriting.current) {
+      // isPanning.current = false; 
+      isDrawing.current = false; 
+      isWriting.current = false; 
+      isPanning.current = false; 
+      freeHand.current = false;
       // is writing
       if (textAreaRef.current && textAreaRef.current.value) {
         renderText(
           mainCtx,
           textAreaRef.current.value,
           writingCoords.x,
-          writingCoords.y + 20 * scale,
-          font * scale
+          writingCoords.y + 20 * scaleRef.current,
+          font * scaleRef.current
         );
+        let newStart = inverseTransform(writingCoords.x, writingCoords.y, panOffsetRef.current, scaleOffsetRef.current, scaleRef.current); //(writingCoords.x - panOffsetRef.current.x * scaleRef.current + scaleOffset.x) / scaleRef.current;
+        // let newStartY = newStart;
         updateHistory({
           shape: "text",
-          startX:
-            (writingCoords.x - panOffset.x * scale + scaleOffset.x) / scale,
-          startY:
-            (writingCoords.y - panOffset.y * scale + scaleOffset.y) / scale,
+          startX:newStart.x,
+          startY:newStart.y,
           width: 0,
           height: 0,
           text: textAreaRef.current?.value,
         });
-        ws.send(
-          JSON.stringify({
-            type: "chat",
-            payload: {
-              shape: "text",
-              startX:
-                (writingCoords.x - panOffset.x * scale + scaleOffset.x) / scale,
-              startY:
-                (writingCoords.y - panOffset.y * scale + scaleOffset.y) / scale,
-              width: 0,
-              height: 0,
-              text: textAreaRef.current.value,
-              roomId: roomId,
-            },
-          })
-        );
+        sendShapeUpdate("text", newStart.x, newStart.y, 0, 0, textAreaRef.current.value, null, roomId); 
       }
 
-      setIsWriting(false);
-    } else if (freeHand) {
-      setFreeHand(false);
+      // setIsWriting(false);
+      // isWriting.current = false; 
+    } else if (freeHand.current) {
+      // setFreeHand(false);
+      freeHand.current = false; 
       if (points && path) {
-
         overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-        mainCtx.fillStyle = "blue";
-        let transformedPoints: number[][] = []; 
-        for(let i = 0; i < points.length; i++) {
-          const point = points[i];
-          if (!point) {console.log("No point found!!!");continue;} // Skip undefined entries
-          console.log("point: "+point); 
-          let x = point[0];
-          let y = point[1];
-          // let pressure = point[2];
-          // console.log(x,y,pressure); 
-          if(x && y){transformedPoints.push([(x-panOffset.x*scale+scaleOffset.x)/scale, (y-panOffset.y*scale+scaleOffset.y)/scale]);}
-          else{
-            console.log("NO point!!!")
-          }
-        }
-        const transformedStroke = getStroke(transformedPoints,{
-          size: 10/scale,
+        mainCtx.fillStyle = "red";
+        let transformedPoints = getInverseTransformedPoints(points, panOffsetRef.current, scaleRef.current); 
+        const transformedStroke = getStroke(transformedPoints, {
+          size: 10 / scaleRef.current,
           thinning: 0.6,
           smoothing: 0.5,
           streamline: 0.5,
-        }); 
+        });
         const svgPathString = getSvgPathFromStroke(transformedStroke);
-        console.log("svgPathString : "+svgPathString); 
+        console.log("svgPathString : " + svgPathString);
         // const transformedPath = new Path2D(svgPathString);
-        mainCtx.beginPath(); 
+        mainCtx.beginPath();
         mainCtx.fill(path);
-        mainCtx.closePath(); 
+        mainCtx.closePath();
         updateHistory({
-          shape:"painting", 
-          startX:0, 
-          startY:0,
-          width:0,
-          height:0,
-          path:transformedPoints,
-        })
-        ws.send(JSON.stringify({ 
-          type: "chat",
-          payload: {
-            shape: "painting",
-            startX: 0,
-            startY: 0,
-            width: 0,
-            height: 0,
-            path: JSON.stringify(transformedPoints),
-            roomId: roomId,
-          },
-        }))
+          shape: "painting",
+          startX: 0,
+          startY: 0,
+          width: 0,
+          height: 0,
+          path: transformedPoints,
+        }); 
+        sendShapeUpdate("painting", 0,0,0,0,null, JSON.stringify(transformedPoints),roomId); 
       }
     }
   }
@@ -602,7 +638,10 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
     // e.preventDefault();
     console.log("mouse wheel");
     const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
-    setScale((prev) => Math.min(Math.max(prev * zoomFactor, 0.5), 20));
+    // setScale((prev) => Math.min(Math.max(prev * zoomFactor, 0.5), 20));
+    let currScale = scaleRef.current; 
+    scaleRef.current = Math.min(Math.max(currScale* zoomFactor, 0.5), 20);
+    redrawCanvas(panOffsetRef.current, scaleRef.current, isDrawing.current); 
   }
 
   function changeToolHandler(e: any) {
@@ -610,13 +649,55 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
     console.log("change tool");
     setTool(e.target.id);
   }
+  function forwardTransform(x:number,y:number,panOffset:{x:number,y:number},scaleOffset:{x:number,y:number}, scale:number):{x:number,y:number}{ 
+      return {
+        x: (x*scale + panOffset.x * scale - scaleOffset.x),
+        y: (y*scale + panOffset.y * scale - scaleOffset.y) ,
+      };
+  }
+  function inverseTransform(x:number,y:number,panOffset:{x:number,y:number},scaleOffset:{x:number,y:number}, scale:number):{x:number,y:number}{ 
+    return {
+      x: (x - panOffset.x * scale + scaleOffset.x)/scale,
+      y: (y - panOffset.y * scale + scaleOffset.y)/scale ,
+    };
+  }
+  function getInverseTransformedPoints(points:number[][], panOffset:{x:number,y:number}, scale:number):number[][]{ 
+    let transformedPoints:number[][] = []; 
+    for (let i = 0; i < points.length; i++) {
+      const point = points[i];
+      if (!point) {
+        console.log("No point found!!!");
+        continue;
+      } // Skip undefined entries
+      console.log("point: " + point);
+      let x = point[0];
+      let y = point[1];
+      // let pressure = point[2];
+      // console.log(x,y,pressure);
+      if (x && y) {
+        // transformedPoints.push([
+        //   (x - panOffset.x * scale + scaleOffset.x) / scale,
+        //   (y - panOffset.y * scale + scaleOffset.y) / scale,
+        // ]);
+        const transformedResults:{x:number, y:number} = inverseTransform(x, y, panOffset, scaleOffsetRef.current, scale);
+        transformedPoints.push([
+          transformedResults.x, 
+          transformedResults.y
+        ]);
+      } else {
+        console.log("NO point!!!");
+         
+      }
+    }
+    return transformedPoints;
+  }
 
   return (
     <div className="w-screen h-screen">
       {/* <svg/> */}
       {isWriting && (
         <textarea
-          style={{ fontSize: `${font * scale}px` }}
+          style={{ fontSize: `${font * scaleRef.current}px` }}
           ref={textAreaRef}
           className={`bg-transparent 
                       border-none 
@@ -635,7 +716,7 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
         onDoubleClick={doubleClickHandler}
         id="overlay"
         ref={overlayCanvasRef}
-        className={`z-10 bg-transparent absolute top-0 left-0 ${tool === "draw" ? "cursor-crosshair" : tool === "text" ? "cursor-text" : tool === "pointer" ? "cursor-grab" : ""} ${isPanning ? "cursor-grabbing" : tool === "pointer" ? "cursor-grab" : "cursor-crosshair"}`}
+        className={`z-10 bg-transparent absolute top-0 left-0 ${tool === "draw" ? "cursor-crosshair" : tool === "text" ? "cursor-text" : tool === "pointer" ? "cursor-grab" : ""} ${action === 'panning' ? "cursor-grabbing" : tool === "pointer" ? "cursor-grab" : "cursor-crosshair"}`}
         onMouseDown={mouseDownHandler}
         onMouseMove={mouseMoveHandler}
         onMouseUp={mouseUpHandler}
@@ -647,10 +728,6 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
         id="main"
         ref={mainCanvasRef}
         className="bg-[#000000] touch-none"
-        onMouseDown={mouseDownHandler}
-        onMouseMove={mouseMoveHandler}
-        onMouseUp={mouseUpHandler}
-        onWheel={mouseWheelHandler}
         width={canvasSize?.width}
         height={canvasSize?.height}
       ></canvas>

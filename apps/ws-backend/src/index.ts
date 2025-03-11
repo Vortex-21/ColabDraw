@@ -85,22 +85,24 @@ wss.on('connection', (socket, request)   => {
             else if(parsedMessage.type === "join"){ 
                 const roomId = parsedMessage.payload.roomId; 
                 console.log(roomId); 
-                let socketMap = roomToSocket.get(roomId); 
+                // let socketMap = roomToSocket.get(roomId); 
                 const room = await prisma.room.findFirst({where:{id:roomId}}); 
                 if(!room){ 
                     socket.send("Room doesnt exist! Please create a room first!");
                     socket.close();  
                     return;
                 }
-                if(!socketMap) // room doesnt exist!
+                if(!roomToSocket.has(roomId)) // room doesnt exist!
                 { 
-                    socketMap = new Map<WebSocket,boolean>();  
+                    // socketMap = new Map<WebSocket,boolean>();  
+                    roomToSocket.set(roomId, new Map<WebSocket, boolean>()); 
                     // return;
                 }
-    
+                const socketMap = roomToSocket.get(roomId); 
+                //@ts-ignore
                 socketMap.set(socket,true);
                 
-                roomToSocket.set(roomId, socketMap); 
+                // roomToSocket.set(roomId, socketMap); 
                 console.log('user joined!'); 
                 socket.send(JSON.stringify({
                     status:"success"
