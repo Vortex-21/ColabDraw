@@ -4,16 +4,10 @@ import React, { useEffect, useRef, useState } from "react";
 import { getStroke } from "perfect-freehand";
 import { getSvgPathFromStroke } from "../utils/pointsToSVG";
 import ToolBox from "./ToolBox";
-import { drawShape, forwardTransform, getInverseTransformedPoints, inverseTransform, redrawCanvas, renderHistoryElements, renderText, sendShapeUpdate, setupCanvas, updateHistory } from "../utils/canvas-utils";
-interface shapeMetaData {
-  shape: string;
-  startX: number;
-  startY: number;
-  width: number;
-  height: number;
-  text?: string;
-  path?: number[][];
-}
+import { drawShape, forwardTransform, getInverseTransformedPoints, inverseTransform, redrawCanvas, renderHistoryElements, renderText, sendShapeUpdate, setupCanvas, shapeMetaData, updateHistory } from "../utils/canvas-utils";
+import { notify } from "../../utils";
+import { ToastContainer } from "react-toastify";
+
 const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const mainCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -417,9 +411,22 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
     setTool(e.target.id);
   }
   
-
+  async function shareHandler(e:any){ 
+    e.preventDefault(); 
+    // console.log("share button clicked!"); 
+    try{const response = await axios.post("http://localhost:3002/api/v1/share-room",{roomId}, {withCredentials:true});  
+    const room_slug = response.data.shareId; 
+    window.navigator.clipboard.writeText(room_slug); 
+    notify("Copied unique roomId !", true);}
+    catch(err:any){ 
+      console.log("Error at share handler: ", err); 
+      notify("Failed to share room, please try again later.", false);
+    }
+  }
   return (
     <div className="w-screen h-screen">
+      <ToastContainer/>
+      <button id='share-button' className = 'bg-purple-800 cursor-pointer border-white border-1 text-white z-30 absolute top-5 right-5 rounded-lg px-4 py-3' onClick={shareHandler}>Share</button>
       {/* <svg/> */}
       {action === 'writing' && (
         <textarea

@@ -17,6 +17,7 @@ enum shapes {
   rectangle
   ellipse
   text
+  painting
 }
 
 model User {
@@ -56,6 +57,7 @@ model Geometry {
   userId    String
   shape     shapes
   text      String?
+  path      String?
   startX    Float
   startY    Float
   width     Float
