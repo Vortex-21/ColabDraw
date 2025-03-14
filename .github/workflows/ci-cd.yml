@@ -13,12 +13,11 @@ jobs:
             
             -   name: setup nodejs
                 uses: actions/setup-node@v4
-                run: npm i -g pnpm
-                with: 
-                    cache: 'pnpm'
+                
+            
             
             -   name: Install dependencies globally
-                run: pnpm install 
+                run: npm i -g pnpm && pnpm install 
 
             -   name: Install dependencies for apps 
                 run: pnpm turbo prune --scope=apps/... --cache-dir=.turbo
