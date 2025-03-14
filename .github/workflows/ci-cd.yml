@@ -21,7 +21,7 @@ jobs:
 
             # -   name: Install dependecies for web
             -   name: Install dependencies
-                run: pnpm install --recursive
+                run: pnpm install -r
 
     database: 
         runs-on: ubuntu-latest
