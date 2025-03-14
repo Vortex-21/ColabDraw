@@ -20,7 +20,7 @@ jobs:
                 run: npm i -g pnpm && pnpm install 
 
             -   name: Install dependencies for apps 
-                run: pnpm exec turbo prune --scope=apps/...
+                run: pnpm exec turbo prune --scope=apps/
     database: 
         runs-on: ubuntu-latest
         services: 
