@@ -1,0 +1,52 @@
+name: CI/CD Pipeline
+
+on:
+    push:
+        branches: [main]
+
+jobs: 
+    setup: 
+        runs-on: ubuntu-latest
+        steps:      
+            -   name: Checkout repository
+                uses: actions/checkout@v3
+            
+            -   name: setup nodejs
+                uses: actions/setup-node@v4
+                with: 
+                    cache: 'pnpm'
+            
+            -   name: Install dependencies globally
+                run: pnpm install 
+
+            -   name: Install dependencies for apps 
+                run: pnpm turbo prune --scope=apps/... --cache-dir=.turbo
+    database: 
+        runs-on: ubuntu-latest
+        services: 
+            psql: 
+                image: postgres:14.17
+                env:
+                    POSTGRES_USER: 'postgres'
+                    POSTGRES_PASSWORD: 'root'
+                    POSTGRES_DB: 'colabdrawDB'
+                ports: 
+                - 5432:5432
+    migrate: 
+        runs-on: ubuntu-latest
+        needs: [database, setup]
+        steps: 
+            -   name: Run prisma migration
+                
+                env: 
+                    DATABASE_URL: "postgresql://postgres:root@localhost:5432/colabdrawDB"
+                
+                run: pnpm exec prisma migrate deploy
+    message_queues:
+        runs-on: ubuntu-latest
+        needs: [setup]
+        services: 
+            redis: 
+                image: redis:latest
+                ports: 
+                - 6379:6379
