@@ -16,12 +16,12 @@ jobs:
                 
             
             
-            # -   name: Install dependencies globally
-            #     run: npm i -g pnpm && pnpm install 
+            -   name: Install dependencies globally
+                run: npm i -g pnpm && pnpm install -r 
 
             # -   name: Install dependecies for web
-            -   name: Install dependencies
-                run: pnpm install -r
+            # -   name: Install dependencies
+            #     run: pnpm install 
 
     database: 
         runs-on: ubuntu-latest
