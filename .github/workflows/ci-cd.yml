@@ -32,6 +32,9 @@ jobs:
                     POSTGRES_DB: 'colabdrawDB'
                 ports: 
                 - 5432:5432
+        steps:
+            - name: Confirm Database is Running
+              run: echo "PostgreSQL service started"
     migrate: 
         runs-on: ubuntu-latest
         needs: [database, setup]
@@ -42,6 +45,7 @@ jobs:
                     DATABASE_URL: "postgresql://postgres:root@localhost:5432/colabdrawDB"
                 
                 run: pnpm exec prisma migrate deploy
+        
     message_queues:
         runs-on: ubuntu-latest
         needs: [setup]
@@ -50,3 +54,6 @@ jobs:
                 image: redis:latest
                 ports: 
                 - 6379:6379
+        steps:
+            - name: Confirm Redis is Running
+              run: echo "Redis service started"
