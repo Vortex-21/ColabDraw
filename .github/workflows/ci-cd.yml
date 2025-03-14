@@ -16,11 +16,13 @@ jobs:
                 
             
             
-            -   name: Install dependencies globally
-                run: npm i -g pnpm && pnpm install 
+            # -   name: Install dependencies globally
+            #     run: npm i -g pnpm && pnpm install 
 
-            -   name: Install dependencies for apps 
-                run: pnpm exec turbo prune 
+            # -   name: Install dependecies for web
+            -   name: Install dependencies
+                run: pnpm install --recursive
+
     database: 
         runs-on: ubuntu-latest
         services: 
