@@ -13,6 +13,7 @@ jobs:
             
             -   name: setup nodejs
                 uses: actions/setup-node@v4
+                run: npm i -g pnpm
                 with: 
                     cache: 'pnpm'
             
