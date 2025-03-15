@@ -1,61 +1,34 @@
-name: CI/CD Pipeline
-
+name: CI
+ 
 on:
-    push:
-        branches: [main]
-
-jobs: 
-    setup: 
-        runs-on: ubuntu-latest
-        steps:      
-            -   name: Checkout repository
-                uses: actions/checkout@v3
-            
-            -   name: setup nodejs
-                uses: actions/setup-node@v4
-                
-            
-            
-            -   name: Install dependencies globally
-                run: npm i -g pnpm && pnpm install -r 
-
-            # -   name: Install dependecies for web
-            # -   name: Install dependencies
-            #     run: pnpm install 
-
-    database: 
-        runs-on: ubuntu-latest
-        services: 
-            psql: 
-                image: postgres:14.17
-                env:
-                    POSTGRES_USER: 'postgres'
-                    POSTGRES_PASSWORD: 'root'
-                    POSTGRES_DB: 'colabdrawDB'
-                ports: 
-                - 5432:5432
-        steps:
-            - name: Confirm Database is Running
-              run: echo "PostgreSQL service started"
-    migrate: 
-        runs-on: ubuntu-latest
-        needs: [database, setup]
-        steps: 
-            -   name: Run prisma migration
-                
-                env: 
-                    DATABASE_URL: "postgresql://postgres:root@localhost:5432/colabdrawDB"
-                
-                run: pnpm exec prisma migrate deploy
-        
-    message_queues:
-        runs-on: ubuntu-latest
-        needs: [setup]
-        services: 
-            redis: 
-                image: redis:latest
-                ports: 
-                - 6379:6379
-        steps:
-            - name: Confirm Redis is Running
-              run: echo "Redis service started"
+  push:
+    branches: ["main"]
+ 
+jobs:
+  build:
+    name: Build and Test
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    
+ 
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+ 
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 8
+ 
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+ 
+      - name: Install dependencies
+        run: pnpm install
+ 
+      - name: Build
+        run: pnpm build
