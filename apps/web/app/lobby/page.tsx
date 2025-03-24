@@ -36,7 +36,7 @@ function Lobby() {
     }
     try {
       const response = await axios.post(
-        "http://localhost:3002/api/v1/create-room",
+        `${process.env.NEXT_PUBLIC_HTTP_BASE}/api/v1/create-room`,
         { slug },
         { withCredentials: true }
       );
@@ -68,7 +68,7 @@ function Lobby() {
     }
     try {
       const response = await axios.post(
-        "http://localhost:3002/api/v1/get-room-id/",
+        `${process.env.NEXT_PUBLIC_HTTP_BASE}/api/v1/get-room-id/`,
         { unique_room_id },
         { withCredentials: true }
       );

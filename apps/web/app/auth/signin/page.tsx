@@ -15,7 +15,7 @@ export default function SignIn() {
       const password = passwordRef.current?.value;
       const username = usernameRef.current?.value;
       const response = await axios.post(
-        "http://localhost:3002/api/v1/signin",
+        `${process.env.NEXT_PUBLIC_HTTP_BASE}/api/v1/signin`,
         { username, password },
         { withCredentials: true }
       );

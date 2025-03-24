@@ -12,7 +12,7 @@ const PreCanvas = () => {
     const wsRef = useRef<WebSocket | null>(null); 
     
     useEffect(() => {
-        const websocketURL = 'ws://localhost:3001/?token='+Cookies.get('token'); 
+        const websocketURL = `${process.env.NEXT_PUBLIC_WS_BASE}/?token=`+Cookies.get('token'); 
         const conn = new WebSocket(websocketURL); 
         conn.onmessage = (event) => { 
             const parsedMessage = JSON.parse(event.data.toString()); 

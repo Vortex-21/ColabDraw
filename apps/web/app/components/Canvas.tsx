@@ -32,7 +32,6 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
   const scaleRef = useRef<number>(1); 
   const histRef = useRef<Array<shapeMetaData>>([]); 
   const pointsRef = useRef<number[][]>([]); 
- 
   useEffect(() => {
     const mainCanvas = mainCanvasRef.current;
     if (!mainCanvas) return;
@@ -41,7 +40,7 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
 
     async function getHistory() {
       const response = await axios.get(
-        `http://localhost:3002/api/v1/geometryHistory/${roomId}`,
+        `${process.env.NEXT_PUBLIC_HTTP_BASE}/api/v1/geometryHistory/${roomId}`,
         { withCredentials: true }
       );
       console.log("response : ", response);
@@ -414,7 +413,7 @@ const Canvas = ({ roomId, ws }: { roomId: number; ws: WebSocket }) => {
   async function shareHandler(e:any){ 
     e.preventDefault(); 
     // console.log("share button clicked!"); 
-    try{const response = await axios.post("http://localhost:3002/api/v1/share-room",{roomId}, {withCredentials:true});  
+    try{const response = await axios.post(`${process.env.NEXT_PUBLIC_HTTP_BASE}/api/v1/share-room`,{roomId}, {withCredentials:true});  
     const room_slug = response.data.shareId; 
     window.navigator.clipboard.writeText(room_slug); 
     notify("Copied unique roomId !", true);}
